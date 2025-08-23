@@ -1,0 +1,3102 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Generatore Valutazioni Comportamento</title>
+  
+<style>
+/* Aesthetic refinements */
+/* Uniform button colors by role */
+.btn-green { background: #4caf50 !important; color: #fff !important; }
+.btn-blue  { background: #1e88e5 !important; color: #fff !important; }
+.btn-gray  { background: #9e9e9e !important; color: #fff !important; }
+.btn-red   { background: #e53935 !important; color: #fff !important; }
+.btn-orange { background: #fb8c00 !important; color: #fff !important; }
+
+/* Increased padding and margin for buttons */
+button {
+  padding: 12px 24px !important;
+  margin: 4px !important;
+}
+
+/* Override highlight: border for customized cells */
+td[class^="selezione-"] {
+  box-shadow: inset 0 0 0 2px #1e88e5 !important;
+  transition: box-shadow 0.3s ease;
+}
+
+/* Modal fade-in animation */
+.modal-overlay {
+  animation: fadeIn 0.3s ease-out;
+}
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+/* Extra spacing in tables */
+table th, table td {
+  padding: 12px !important;
+}
+
+/* Icon for ripristina option enforced in HTML select label already with 🔄 icon */
+
+@media print {
+  .fab-start {
+    display: none !important;
+  }
+}
+
+/* Effetto evidenza pulsante Inizia Valutazione */
+@keyframes pulse {
+  0% { box-shadow: 0 0 0 0 rgba(30,136,229,0.7); }
+  70% { box-shadow: 0 0 0 10px rgba(30,136,229,0); }
+  100% { box-shadow: 0 0 0 0 rgba(30,136,229,0); }
+}
+.highlight-pulse {
+  animation: pulse 1s ease-out;
+}
+
+/* Floating Action Button */
+.fab-start {
+  position: fixed;
+  bottom: 80px; /* spostato sopra la firma */
+  right: 20px;
+  background: var(--primary);
+  color: #fff;
+  border-radius: 24px;
+  padding: 12px 16px;
+  font-size: 1rem;
+  font-weight: 600;
+  box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+  cursor: pointer;
+  z-index: 1001;
+  transition: transform 0.2s;
+}
+.fab-start:hover {
+  transform: scale(1.05);
+}
+
+/* Modal di conferma inizio valutazione */
+#start-confirm-modal {
+  display: none;
+}
+#start-confirm-modal.modal-overlay {
+  align-items: center;
+  justify-content: center;
+}
+#start-confirm-modal .modal-content {
+  max-width: 400px;
+  text-align: center;
+}
+#start-confirm-modal .modal-header h2 {
+  margin-bottom: 8px;
+}
+#start-confirm-modal .modal-footer {
+  display: flex;
+  justify-content: space-around;
+  margin-top: 16px;
+}
+
+/* FIX GPTino: Nascondi header-school nella vista risultati e stampa */
+#risultati-view #header-school {
+  display: none;
+}
+@media print {
+  /* Elimina margini interni per stampa compatta */
+  .container, #report {
+    margin: 0 !important;
+    padding: 0 !important;
+    width: 100% !important;
+    max-width: none !important;
+  
+  /* Riduci font degli indicatori e limitali a 2 righe */
+  #tabella-risultati td:nth-child(4),
+  #tabella-risultati th:nth-child(4) {
+    font-size: 6px !important;
+    line-height: 1 !important;
+    max-height: 2.4em !important;
+    overflow: hidden !important;
+    /* Centrare la firma del coordinatore */
+  .signature, .signature p {
+    text-align: center !important;
+  }
+}
+  /* Aumenta font delle prime 3 colonne */
+  #tabella-risultati td:nth-child(-n+3),
+  #tabella-risultati th:nth-child(-n+3) {
+    font-size: 12px !important;
+  }
+}
+  h1, h2, h3, h4, h5, h6 {
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  #header-school {
+    display: none !important;
+  }
+  body {
+    margin: 10mm;
+    font-size: 12px;
+  }
+  table {
+    font-size: 11px;
+  }
+  th, td {
+    padding: 6px;
+  }
+  .no-print {
+    display: none !important;
+  }
+  .print-footer {
+    font-size: 10px;
+    text-align: center;
+    position: fixed;
+    bottom: 0;
+    width: 100%;
+  }
+}
+
+:root {
+  --bg-ottimo: #dcfce7;
+  --text-ottimo: #166534;
+  --bg-distinto: #e0f2fe;
+  --text-distinto: #0369a1;
+  --bg-buono: #fef9c3;
+  --text-buono: #854d0e;
+  --bg-discreto: #fef3c7;
+  --text-discreto: #92400e;
+  --bg-sufficiente: #ffedd5;
+  --text-sufficiente: #9a3412;
+  --bg-nonsufficiente: #fee2e2;
+  --text-nonsufficiente: #b91c1c;
+
+  --primary: #1e88e5;
+  --primary-dark: #1565c0;
+  --primary-light: #bbdefb;
+  --secondary: #f5f5f5;
+  --light: #ffffff;
+  --gray: #e0e0e0;
+  --text: #333;
+  --red: #ef4444;
+  --green: #4caf50;
+  --yellow: #ffc107;
+  
+  --border-radius: 8px;
+  --box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  --transition: all 0.3s ease;
+}
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  font-family: 'Segoe UI', sans-serif;
+}
+body {
+  background: #f9f9f7;
+  color: var(--text);
+  padding: 20px;
+}
+h1, h2, h3 {
+  margin-bottom: 15px;
+  color: var(--primary-dark);
+}
+h1 {
+  text-align: center;
+  font-size: 2rem;
+}
+.header-school {
+  text-align: center;
+  margin-bottom: 20px;
+  cursor: pointer;
+  padding: 8px;
+  transition: all 0.2s;
+}
+.header-school:hover {
+  background-color: rgba(0,0,0,0.05);
+  border-radius: 4px;
+}
+.container {
+  background: var(--light);
+  border-radius: var(--border-radius);
+  box-shadow: var(--box-shadow);
+  padding: 20px;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+label {
+  display: block;
+  font-weight: 600;
+  margin: 10px 0 5px;
+}
+input, select, textarea {
+  width: 100%;
+  padding: 10px;
+  border-radius: 4px;
+  border: 1px solid var(--gray);
+  margin-bottom: 15px;
+  font-size: 1rem;
+}
+button {
+  padding: 10px 20px;
+  border: none;
+  border-radius: 4px;
+  font-weight: 600;
+  cursor: pointer;
+  font-size: 1rem;
+  transition: var(--transition);
+}
+button:hover { opacity: 0.9; transform: translateY(-1px); }
+button:active { transform: translateY(1px); }
+
+.btn-green { background: var(--green); color: white; }
+.btn-green:hover { background: #388e3c; }
+.btn-red { background: var(--red); color: white; }
+.btn-red:hover { background: #c62828; }
+.btn-blue { background: var(--primary); color: white; }
+.btn-blue:hover { background: var(--primary-dark); }
+.btn-gray { background: var(--gray); color: var(--text); }
+.btn-gray:hover { background: #ccc; }
+.btn-purple { background-color: #8b5cf6; color: white; }
+.btn-purple:hover { background-color: #7c3aed; }
+.btn-orange { background-color: #f59e0b; color: white; }
+.btn-orange:hover { background-color: #d97706; }
+
+.grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 15px;
+}
+.grid > div {
+  flex: 1 1 30%;
+  min-width: 250px;
+}
+.student-list {
+  list-style: none;
+  padding: 0;
+  border: 1px solid var(--gray);
+  border-radius: 4px;
+  max-height: 300px;
+  overflow-y: auto;
+  background: white;
+}
+.student-list li {
+  padding: 10px 15px;
+  border-bottom: 1px solid var(--gray);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.student-list li:last-child {
+  border-bottom: none;
+}
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 20px;
+}
+th, td {
+  padding: 10px;
+  border: 1px solid var(--gray);
+  text-align: left;
+}
+th {
+  background-color: var(--primary);
+  color: white;
+}
+tr:nth-child(even) {
+  background-color: var(--secondary);
+}
+.badge {
+  display: inline-block;
+  padding: 5px 8px;
+  border-radius: 4px;
+  font-size: 0.8rem;
+  font-weight: bold;
+  margin-bottom: 3px;
+}
+.badge-ottimo { background-color: #dcfce7; color: #166534; }
+.badge-distinto { background-color: #e0f2fe; color: #0369a1; }
+.badge-buono { background-color: #fef9c3; color: #854d0e; }
+.badge-discreto { background-color: #fef3c7; color: #92400e; }
+.badge-sufficiente { background-color: #ffedd5; color: #9a3412; }
+.badge-nonsufficiente { background-color: #fee2e2; color: #b91c1c; }
+
+.seleziona-btn {
+  padding: 8px;
+  border-radius: 4px;
+  font-size: 14px;
+  margin-bottom: 8px;
+  cursor: pointer;
+  transition: background-color 0.3s;
+}
+.seleziona-btn.selected {
+  background-color: var(--primary);
+  color: white;
+}
+.seleziona-btn.not-selected {
+  background-color: #e5e7eb;
+  color: #1f2937;
+}
+.seleziona-btn.not-selected:hover {
+  background-color: #d1d5db;
+}
+
+.text-center { text-align: center; }
+.text-right { text-align: right; }
+.mt-4 { margin-top: 20px; }
+.mb-4 { margin-bottom: 20px; }
+.hidden { display: none; }
+.seleziona-btn[data-livello="0"] {
+  background-color: var(--bg-ottimo);
+  color: var(--text-ottimo);
+}
+.seleziona-btn[data-livello="1"] {
+  background-color: var(--bg-distinto);
+  color: var(--text-distinto);
+}
+.seleziona-btn[data-livello="2"] {
+  background-color: var(--bg-buono);
+  color: var(--text-buono);
+}
+.seleziona-btn[data-livello="3"] {
+  background-color: var(--bg-discreto);
+  color: var(--text-discreto);
+}
+.seleziona-btn[data-livello="4"] {
+  background-color: var(--bg-sufficiente);
+  color: var(--text-sufficiente);
+}
+.seleziona-btn[data-livello="5"] {
+  background-color: var(--bg-nonsufficiente);
+  color: var(--text-nonsufficiente);
+}
+
+/* Quando selezionato, sovrascrive con il blu */
+.seleziona-btn.selected {
+  background-color: var(--primary) !important;
+  color: white !important;
+}
+
+td .seleziona-btn[data-livello="0"] + .descrittore {
+  color: var(--text-ottimo);
+}
+td .seleziona-btn[data-livello="1"] + .descrittore {
+  color: var(--text-distinto);
+}
+td .seleziona-btn[data-livello="2"] + .descrittore {
+  color: var(--text-buono);
+}
+td .seleziona-btn[data-livello="3"] + .descrittore {
+  color: var(--text-discreto);
+}
+td .seleziona-btn[data-livello="4"] + .descrittore {
+  color: var(--text-sufficiente);
+}
+td .seleziona-btn[data-livello="5"] + .descrittore {
+  color: var(--text-nonsufficiente);
+}
+
+#tabella-valutazione {
+  border-collapse: separate;
+  border-spacing: 0;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+#tabella-valutazione tbody td:first-child {
+  font-weight: bold;
+  color: #111827; /* grigio scuro */
+  background-color: #f0f0f0;
+}
+#tabella-valutazione thead th {
+  text-align: center;
+  font-weight: bold;
+  color: #374151;
+  padding: 12px;
+}
+
+#tabella-valutazione thead th:nth-child(2) {
+  background-color: var(--bg-ottimo);
+  color: var(--text-ottimo);
+}
+#tabella-valutazione thead th:nth-child(3) {
+  background-color: var(--bg-distinto);
+  color: var(--text-distinto);
+}
+#tabella-valutazione thead th:nth-child(4) {
+  background-color: var(--bg-buono);
+  color: var(--text-buono);
+}
+#tabella-valutazione thead th:nth-child(5) {
+  background-color: var(--bg-discreto);
+  color: var(--text-discreto);
+}
+#tabella-valutazione thead th:nth-child(6) {
+  background-color: var(--bg-sufficiente);
+  color: var(--text-sufficiente);
+}
+#tabella-valutazione thead th:nth-child(7) {
+  background-color: var(--bg-nonsufficiente);
+  color: var(--text-nonsufficiente);
+}
+
+td.voto-OTTIMO { background-color: #dcfce7; color: #166534; font-weight: bold; text-align: center; }
+td.voto-DISTINTO { background-color: #e0f2fe; color: #0369a1; font-weight: bold; text-align: center; }
+td.voto-BUONO { background-color: #fef9c3; color: #854d0e; font-weight: bold; text-align: center; }
+td.voto-DISCRETO { background-color: #fef3c7; color: #92400e; font-weight: bold; text-align: center; }
+td.voto-SUFFICIENTE { background-color: #ffedd5; color: #9a3412; font-weight: bold; text-align: center; }
+td.voto-NON_SUFFICIENTE { background-color: #fee2e2; color: #b91c1c; font-weight: bold; text-align: center; }
+
+
+td.selezione-OTTIMO { background-color: #dcfce7 !important; }
+td.selezione-DISTINTO { background-color: #e0f2fe !important; }
+td.selezione-BUONO { background-color: #fef9c3 !important; }
+td.selezione-DISCRETO { background-color: #fef3c7 !important; }
+td.selezione-SUFFICIENTE { background-color: #ffedd5 !important; }
+td.selezione-NON_SUFFICIENTE { background-color: #fee2e2 !important; }
+
+
+td[class^="selezione-"] {
+  transition: background-color 0.4s ease;
+}
+
+/* NUOVA BARRA DI PROGRESSO */
+.progress-container {
+  margin: 10px 0;
+  background-color: #f0f0f0;
+  border-radius: 10px;
+  height: 10px;
+  width: 100%;
+  overflow: hidden;
+}
+
+.progress-bar {
+  height: 100%;
+  background-color: var(--primary);
+  border-radius: 10px;
+  transition: width 0.3s ease;
+}
+
+/* MIGLIORIE PER VALUTAZIONE */
+.valutazione-nav {
+  position: sticky;
+  top: 0;
+  z-index: 1000;
+  background: white;
+  padding: 1rem;
+  border-bottom: 2px solid #ccc;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+  border-radius: var(--border-radius);
+}
+
+#giudizio-finale-inline {
+  font-size: 1.5rem;
+  padding: 10px 20px;
+  transition: all 0.3s ease;
+}
+
+/* NOTIFICHE */
+.notification {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  padding: 15px 20px;
+  background-color: #333;
+  color: white;
+  border-radius: var(--border-radius);
+  box-shadow: 0 3px 10px rgba(0,0,0,0.2);
+  z-index: 3000;
+  opacity: 0;
+  transform: translateY(20px);
+  transition: all 0.3s ease;
+}
+
+.notification.show {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.notification.success {
+  background-color: var(--green);
+}
+
+.notification.error {
+  background-color: var(--red);
+}
+
+.notification.info {
+  background-color: var(--primary);
+}
+
+@media print {
+  /* Elimina margini interni per stampa compatta */
+  .container, #report {
+    margin: 0 !important;
+    padding: 0 !important;
+    width: 100% !important;
+    max-width: none !important;
+    /* Centrare la firma del coordinatore */
+  .signature, .signature p {
+    text-align: center !important;
+  }
+}
+  h1, h2, h3, h4, h5, h6 {
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  .print-footer {
+    font-size: 10px !important;
+    text-align: center !important;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    padding-bottom: 10px;
+  }
+  
+  .no-print {
+    display: none !important;
+  }
+}
+
+@media print {
+  /* Elimina margini interni per stampa compatta */
+  .container, #report {
+    margin: 0 !important;
+    padding: 0 !important;
+    width: 100% !important;
+    max-width: none !important;
+    /* Centrare la firma del coordinatore */
+  .signature, .signature p {
+    text-align: center !important;
+  }
+}
+  h1, h2, h3, h4, h5, h6 {
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  .firma-coordinatore {
+    text-align: right !important;
+    margin-top: 20px;
+    margin-right: 40px;
+  }
+}
+
+.firma-coordinatore {
+  text-align: right;
+  margin-top: 20px;
+  margin-right: 40px;
+}
+
+/* Centro anche il titolo nella sezione risultati */
+.title-section h1 {
+  text-align: center;
+}
+
+/* Centro la sezione sottotitolo nei risultati */
+.subtitle-section {
+  text-align: center;
+}
+
+/* Stile per il popup modale */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 3000;
+  backdrop-filter: blur(5px);
+}
+
+.modal-content {
+  background-color: white;
+  padding: 30px;
+  border-radius: 8px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+  width: 90%;
+  max-width: 500px;
+}
+
+.modal-header {
+  text-align: center;
+  margin-bottom: 20px;
+}
+
+.modal-header h2 {
+  color: var(--primary-dark);
+  margin-bottom: 10px;
+}
+
+.modal-footer {
+  margin-top: 20px;
+  text-align: center;
+}
+
+.footer-signature {
+  position: fixed;
+  bottom: 16px;
+  right: 16px;
+  font-size: 12px;
+  color: var(--text);
+  opacity: 0.8;
+  z-index: 100;
+  text-align: right;
+  font-style: italic;
+  background-color: rgba(255, 255, 255, 0.8);
+  padding: 5px 10px;
+  border-radius: 4px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+  transition: all 0.2s ease;
+}
+
+.footer-signature:hover {
+  opacity: 1;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.section {
+  background-color: white;
+  border-radius: 8px;
+  padding: 20px;
+  margin-bottom: 20px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+
+.section.bg-blue {
+  border-left: 4px solid var(--primary);
+}
+
+.section.bg-green {
+  border-left: 4px solid var(--green);
+}
+
+.section.bg-orange {
+  border-left: 4px solid var(--yellow);
+}
+
+.tab, .tab-button {
+  display: inline-block;
+  padding: 10px 15px;
+  cursor: pointer;
+  margin-right: 2px;
+  background-color: #f5f5f5;
+  border-radius: 4px 4px 0 0;
+}
+
+.tab.active, .tab-button.active {
+  background-color: white;
+  border-bottom: 2px solid var(--primary);
+  font-weight: bold;
+}
+
+.tab-content {
+  display: none;
+  padding: 15px;
+  background-color: white;
+  border-radius: 0 0 4px 4px;
+}
+
+.tab-content.active {
+  display: block;
+}
+
+.flex {
+  display: flex;
+}
+
+.flex-grow {
+  flex-grow: 1;
+}
+
+.justify-between {
+  justify-content: space-between;
+}
+
+.items-center {
+  align-items: center;
+}
+
+.gap-2 {
+  gap: 8px;
+}
+
+.border {
+  border: 1px solid var(--gray);
+}
+
+.rounded {
+  border-radius: 4px;
+}
+
+.rounded-l {
+  border-top-left-radius: 4px;
+  border-bottom-left-radius: 4px;
+}
+
+.rounded-r {
+  border-top-right-radius: 4px;
+  border-bottom-right-radius: 4px;
+}
+
+.p-4 {
+  padding: 1rem;
+}
+
+.mb-2 {
+  margin-bottom: 0.5rem;
+}
+
+.mt-2 {
+  margin-top: 0.5rem;
+}
+
+.mt-8 {
+  margin-top: 2rem;
+}
+
+.py-2 {
+  padding-top: 0.5rem;
+  padding-bottom: 0.5rem;
+}
+
+.px-4 {
+  padding-left: 1rem;
+  padding-right: 1rem;
+}
+
+.font-semibold {
+  font-weight: 600;
+}
+
+.font-bold {
+  font-weight: 700;
+}
+
+.text-blue-700 {
+  color: var(--primary);
+}
+
+.text-gray-500 {
+  color: #6b7280;
+}
+
+.text-gray-600 {
+  color: #4b5563;
+}
+
+.italic {
+  font-style: italic;
+}
+
+@media print {
+  /* Elimina margini interni per stampa compatta */
+  .container, #report {
+    margin: 0 !important;
+    padding: 0 !important;
+    width: 100% !important;
+    max-width: none !important;
+    /* Centrare la firma del coordinatore */
+  .signature, .signature p {
+    text-align: center !important;
+  }
+}
+  h1, h2, h3, h4, h5, h6 {
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  .print-footer {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    text-align: center;
+    font-size: 10px;
+    padding: 5px 0;
+    background: white;
+    border-top: 1px solid #ccc;
+    z-index: 9999;
+  }
+
+  #header-school,
+  .title-section {
+    display: none;
+  }
+}
+
+@page {
+  margin: 10mm;
+}
+
+@media print {
+  /* Elimina margini interni per stampa compatta */
+  .container, #report {
+    margin: 0 !important;
+    padding: 0 !important;
+    width: 100% !important;
+    max-width: none !important;
+    /* Centrare la firma del coordinatore */
+  .signature, .signature p {
+    text-align: center !important;
+  }
+}
+  h1, h2, h3, h4, h5, h6 {
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  .title-section h1 {
+    display: none;
+  }
+}
+
+@media print {
+  /* Elimina margini interni per stampa compatta */
+  .container, #report {
+    margin: 0 !important;
+    padding: 0 !important;
+    width: 100% !important;
+    max-width: none !important;
+    /* Centrare la firma del coordinatore */
+  .signature, .signature p {
+    text-align: center !important;
+  }
+}
+  h1, h2, h3, h4, h5, h6 {
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  #istituto-report {
+    display: none;
+  }
+}
+
+@media print {
+  /* Elimina margini interni per stampa compatta */
+  .container, #report {
+    margin: 0 !important;
+    padding: 0 !important;
+    width: 100% !important;
+    max-width: none !important;
+    /* Centrare la firma del coordinatore */
+  .signature, .signature p {
+    text-align: center !important;
+  }
+}
+  h1, h2, h3, h4, h5, h6 {
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  #app > h1, 
+  #istituto-report {
+    display: none !important;
+  }
+}
+
+@media print {
+  /* Elimina margini interni per stampa compatta */
+  .container, #report {
+    margin: 0 !important;
+    padding: 0 !important;
+    width: 100% !important;
+    max-width: none !important;
+    /* Centrare la firma del coordinatore */
+  .signature, .signature p {
+    text-align: center !important;
+  }
+}
+  h1, h2, h3, h4, h5, h6 {
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  .notification {
+    display: none !important;
+  }
+}
+
+/* Regole aggiuntive per stampa A4 compatta */
+@page { size: A4 portrait;
+  margin: 5mm;
+}
+@media print {
+  /* Elimina margini interni per stampa compatta */
+  .container, #report {
+    margin: 0 !important;
+    padding: 0 !important;
+    width: 100% !important;
+    max-width: none !important;
+    /* Centrare la firma del coordinatore */
+  .signature, .signature p {
+    text-align: center !important;
+  }
+}
+  h1, h2, h3, h4, h5, h6 {
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  html, body {
+    margin: 0;
+    padding: 0;
+    height: 100%;
+    width: 100%;
+  }
+  .container, #report {
+    width: 100% !important;
+    max-width: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+  /* Riduci dimensioni del testo per far entrare più righe */
+  body, table, #report {
+    font-size: 10px !important;
+    line-height: 1.2 !important;
+  }
+  table {
+    font-size: 8px !important;
+  }
+  th, td {
+    padding: 4px !important;
+  }
+  /* Rimuovi eventuali spaziature extra */
+  .print-footer {
+    font-size: 8px !important;
+    bottom: 0 !important;
+  }
+}
+
+
+  /* Modal responsive: max-height e scroll interno */
+  .modal-content {
+    max-height: calc(100vh - 60px) !important;
+    overflow-y: auto !important;
+  }
+
+/* Center the 'Importa i dati salvati' button in the modal */
+#importa-scuola {
+  display: block !important;
+  margin: 0.5rem auto !important;
+}
+</style>
+
+
+  <style>
+    /* Nascondi l'intestazione 'Valutazione di:' */
+    #valutazione-view h2.font-bold {
+      display: none !important;
+    }
+    /* Colore azzurro per il nome nella barra sticky */
+    #nome-studente-nav {
+      color: var(--primary) !important;
+    }
+  </style>
+
+<style>
+  /* FAB Salva e Scarica */
+  .fab-save {
+    position: fixed;
+    bottom: 80px;
+    left: 20px;
+    background: #f59e0b;
+    color: white;
+    border-radius: 24px;
+    padding: 12px 16px;
+    font-size: 1rem;
+    font-weight: 600;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+    cursor: pointer;
+    z-index: 1001;
+    transition: transform 0.2s;
+  }
+  .fab-save:hover {
+    transform: scale(1.05);
+  }
+  @media print {
+    .fab-save {
+      display: none !important;
+    }
+  }
+</style>
+
+<style>
+/* Centra il pulsante Importa i dati salvati nel modal */
+#start-confirm-modal .modal-footer {
+  text-align: center;
+}
+#importa-scuola {
+  display: inline-flex;
+  align-items: center;
+  margin: 0.5rem auto;
+}
+#importa-scuola .icon {
+  margin-right: 8px;
+}
+</style>
+
+
+<style>
+/* Pulsante di chiusura modal */
+.close-modal {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  background: transparent;
+  border: none;
+  font-size: 1.5rem;
+  line-height: 1;
+  cursor: pointer;
+  color: var(--text);
+  transition: color 0.2s;
+}
+.close-modal:hover {
+  color: var(--primary-dark);
+}
+</style>
+
+
+<style>
+.preview-actions {
+  text-align: center;
+  margin: 20px 0;
+}
+.preview-actions button {
+  margin: 0 8px;
+  font-size: 1rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.save-reminder {
+  background-color: #fff4e5;
+  border-left: 4px solid #f59e0b;
+  padding: 12px 16px;
+  margin-bottom: 16px;
+  font-style: italic;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+</style>
+
+<style>
+.save-reminder-wrapper {
+  text-align: center;
+  margin: 16px 0;
+}
+.save-reminder {
+  display: inline-block;
+  max-width: 80%;
+  text-align: left;
+}
+</style>
+</head>
+<body>
+  <div class="container" id="app">
+    <h1>Generatore Valutazioni Comportamento Scuola Primaria</h1>
+    <h2 id="header-school" class="header-school">Informazioni scuola (clicca per modificare)</h2>
+    
+    <!-- Notifica -->
+    <div class="notification" id="notification">Notifica</div>
+    
+    <!-- Modal per informazioni scolastiche -->
+    <div id="school-info-modal" class="modal-overlay" style="display: none;">
+      <div class="modal-content">
+    <button type="button" class="close-modal" aria-label="Chiudi modal">&times;</button>
+
+        <div class="form-group">
+          <label for="istituto">Istituto:</label>
+          <input type="text" id="istituto" class="school-info-input" placeholder="Nome dell'Istituto">
+        </div>
+        <div class="form-group">
+          <label for="quadrimestre-modal">Quadrimestre:</label>
+          <select id="quadrimestre-modal" class="school-info-input">
+            <option value="">Seleziona</option>
+            <option value="Primo">Primo</option>
+            <option value="Secondo">Secondo</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="anno-scolastico">Anno Scolastico:</label>
+          <input type="text" id="anno-scolastico" class="school-info-input" placeholder="Es. 2024/2025">
+        </div>
+        <div class="form-group">
+          <label for="plesso-modal">Plesso:</label>
+          <input type="text" id="plesso-modal" class="school-info-input" placeholder="Es. Scuola Primaria di...">
+        </div>
+        <div class="form-group">
+          <label for="classe-modal">Classe:</label>
+          <input type="text" id="classe-modal" class="school-info-input" placeholder="Es. 3">
+        </div>
+        <div class="form-group">
+          <label for="sezione-modal">Sezione:</label>
+          <input type="text" id="sezione-modal" class="school-info-input" placeholder="Es. B">
+        </div>
+        <div class="form-group">
+          <label for="coordinatore-modal">Coordinatore:</label>
+          <input type="text" id="coordinatore-modal" class="school-info-input" placeholder="Es. Mario Rossi">
+        
+        <div class="form-group">
+          <label for="data-scrutinio-modal">Data Scrutinio:</label>
+          <input type="date" id="data-scrutinio-modal" class="school-info-input" />
+        </div>
+</div>
+<div class="modal-footer">
+          <button type="button" id="salva-info-scuola" class="btn-green">
+            Salva e Continua
+          </button>
+          <p style="margin: 15px 0;">oppure</p>
+          <div class="form-group">
+            <label for="import-school-json">Importa dati salvati:</label>
+            <div style="display: flex; gap: 8px;">
+              <button type="button" id="importa-scuola" class="btn-purple"><i class="icon">💾</i> Importa i dati salvati</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <!-- MODAL DI CONFERMA IMPORTAZIONE STUDENTI -->
+    <div id="import-modal" class="modal-overlay" style="display: none;">
+      <div class="modal-content">
+    <button type="button" class="close-modal" aria-label="Chiudi modal">&times;</button>
+        <div class="modal-header">
+      <h2>Inizia Valutazione</h2>
+      <p>Hai importato <span id="count-students-confirm"></span> studenti.<br>Vuoi iniziare la valutazione ora?</p>
+      <div class="form-group" style="margin-top:10px; text-align:left;">
+        <label for="scrutinio-date-modal">Data Scrutinio:</label>
+        <input type="date" id="scrutinio-date-modal" style="width:100%; padding:8px; border:1px solid var(--gray); border-radius:4px;" />
+      </div>
+          <h2>Conferma importazione studenti</h2>
+          <p>Sono stati trovati <span id="num-studenti-import"></span> studenti:</p>
+        </div>
+        <div style="max-height: 300px; overflow-y: auto; margin: 15px 0; padding: 10px; border: 1px solid #ddd; border-radius: 4px;">
+          <ul id="anteprima-studenti" style="list-style: none; padding: 0;"></ul>
+        </div>
+        <p>Vuoi procedere con l'importazione?</p>
+        <div class="flex justify-between" style="margin-top: 20px;">
+          <button id="annulla-import" class="btn-gray">Annulla</button>
+          <button id="conferma-import" class="btn-green">Importa</button>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Footer per schermo -->
+    <footer class="footer-signature no-print">
+      Powered by Vibe Coding © 2025 - Fabio Rizzotto edition
+    </footer>
+  
+    <!-- FASE INSERIMENTO DATI -->
+    <div id="inserimento-view">
+      <div class="section bg-blue">
+        <h2>Dati Classe</h2>
+        <div class="grid">
+          <div>
+            <label for="quadrimestre">Quadrimestre</label>
+            <select id="quadrimestre">
+              <option value="">Seleziona</option>
+              <option value="Primo">Primo</option>
+              <option value="Secondo">Secondo</option>
+            </select>
+          </div>
+          <div>
+            <label for="classe">Classe</label>
+            <input type="text" id="classe" placeholder="Es. 3">
+          </div>
+          <div>
+            <label for="sezione">Sezione</label>
+            <input type="text" id="sezione" placeholder="es. B">
+          </div>
+          <div>
+            <label for="plesso">Plesso</label>
+            <input type="text" id="plesso" placeholder="es. Scuola Primaria di...">
+          </div>
+          <div>
+            <label for="coordinatore">Coordinatore/trice di Classe</label>
+            <input type="text" id="coordinatore" placeholder="es. Mario Rossi">
+          </div>
+          <div>
+            <label for="data">Data Scrutinio</label>
+            <input type="date" id="data">
+          </div>
+        </div>
+        <!-- Pulsante per importare dati salvati (JSON) -->
+        <div style="margin-top:10px;">
+          <button id="importa-dati-salvati" class="btn-purple">Importa dati salvati</button>
+          <input type="file" id="file-import-dati" accept=".json" style="display:none;">
+        </div>
+      </div>
+      
+      <div class="section bg-green">
+        <h2>Elenco Studenti</h2>
+        <div class="tabs">
+          <div class="tab active" data-tab="aggiungi-singolo">Aggiungi singolo studente</div>
+          <div class="tab" data-tab="importa-studenti">Importa elenco studenti</div>
+        </div>
+        <div id="aggiungi-singolo" class="tab-content active">
+          <div class="flex mb-2">
+            <input type="text" id="nuovo-studente" placeholder="Nome e Cognome" class="flex-grow rounded-l" style="border-top-right-radius: 0; border-bottom-right-radius: 0; margin-bottom: 0;">
+            <button id="aggiungi-studente" class="btn-green rounded-r" style="border-top-left-radius: 0; border-bottom-left-radius: 0;">Aggiungi</button>
+          </div>
+        </div>
+        <div id="importa-studenti" class="tab-content">
+          <div class="mb-4">
+            <p>Scegli uno dei metodi seguenti per importare un elenco di studenti:</p>
+            <div class="p-4 border rounded mb-2">
+              <h3>Metodo 1: Copia e Incolla</h3>
+              <p>Incolla un elenco di nomi (uno per riga):</p>
+              <textarea id="paste-area" placeholder="Incolla qui l'elenco degli studenti (uno per riga)" style="min-height: 100px;"></textarea>
+              <button id="importa-da-testo" class="btn-purple">Importa elenco</button>
+            </div>
+            <div class="p-4 border rounded mb-2">
+              <h3>Metodo 2: Carica un file</h3>
+              <p>Puoi importare un file di testo, CSV, Excel o Word:</p>
+              <input type="file" id="file-import" accept=".txt,.csv,.xlsx,.docx,.xls">
+              <div id="file-import-info" class="hidden"></div>
+              <button id="importa-da-file" class="btn-orange mt-2">Carica file</button>
+            </div>
+          </div>
+        </div>
+        <h3 class="mt-4">Studenti inseriti</h3>
+        <div id="studenti-counter" style="margin-bottom: 0.5rem; font-size: 0.9rem; color: #666;">
+          Totale: 0 studenti
+        </div>
+        <ul id="lista-studenti" class="student-list"></ul>
+        <p id="no-studenti" class="text-gray-500 italic">Nessuno studente inserito</p>
+        <div class="mt-2">
+          <button id="elimina-tutti" class="btn-red" style="display: none;">Elimina tutti gli studenti</button>
+        </div>
+      </div>
+      <div class="text-center mt-8">
+        
+      </div>
+    </div>
+    
+    <!-- FASE VALUTAZIONE -->
+    
+    <!-- Pulsante di avvio nascosto per FAB -->
+    <button id="inizia-valutazione" style="display:none;"></button>
+
+<div id="valutazione-view" style="display: none;">
+      <button class="btn-red no-print" onclick="vaiHome()" style="margin-bottom: 15px;">
+        <i class="icon">🏠</i> Torna alla Home
+      </button>
+      
+      <div class="valutazione-nav no-print">
+        <div id="nome-studente-nav" class="text-center" style="flex-grow:1; font-weight:bold; font-size:1.2rem;"></div>
+        <div class="text-center" style="flex-grow:1;">
+          <span class="badge" id="giudizio-finale-inline">Giudizio: -</span>
+          <div class="progress-container" style="margin-top: 8px;">
+            <div class="progress-bar" id="progress-bar" style="width: 0%;"></div>
+          </div>
+        </div>
+        <div class="flex" style="align-items: center;">
+          <button class="btn-gray" id="prev-studente">← Studente precedente</button>
+          <button class="btn-blue" id="next-studente">Studente successivo →</button>
+        </div>
+      </div>
+      
+      <div class="border rounded" style="padding: 20px; background-color: white; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+        <div class="flex justify-between items-center mb-4">
+          <h2 class="font-bold">Valutazione di: <span id="nome-studente-attuale" class="text-blue-700"></span></h2>
+          <div class="text-gray-600" id="progress-studente"></div>
+        </div>
+        <div style="overflow-x: auto;">
+          <table id="tabella-valutazione">
+            <thead>
+              <tr>
+                <th style="width: 16%;">Indicatore</th>
+                <!-- Le colonne dei livelli verranno aggiunte dinamicamente -->
+              </tr>
+            </thead>
+            <tbody>
+              <!-- Le righe degli indicatori verranno aggiunte dinamicamente -->
+            </tbody>
+          </table>
+        </div>
+        <div class="section bg-orange mt-4">
+          <h2>Note per <span id="note-studente-nome" class="text-blue-700"></span></h2>
+          <textarea id="note-studente" placeholder="Inserisci eventuali note per questo studente..." style="min-height: 80px;"></textarea>
+        </div>
+      </div>
+    </div>
+    
+    <!-- FASE RISULTATI -->
+    <div id="risultati-view" style="display: none;">
+      <button class="btn-red no-print" onclick="vaiHome()" style="margin-bottom: 15px;">
+        <i class="icon">🏠</i> Torna alla Home
+      </button>
+      
+      <div class="mb-4 flex justify-between items-center no-print">
+        <button id="torna-dati" class="btn-gray">← Torna alla modifica dati</button>
+        </div>
+      <!-- Tasto Termina/Chiudi Sessione -->
+      <div style="margin-bottom: 20px; text-align: right;" class="no-print">
+        <button id="chiudi-sessione" class="btn-red">Termina/Chiudi Sessione</button>
+      </div>
+
+<div class="preview-actions no-print">
+  <button id="esporta-csv" class="btn-green">📤 Esporta CSV</button>
+  <button id="esporta-dati" class="btn-orange">💾 Salva i dati</button>
+  <button id="stampa-report" class="btn-green">🖨️ Stampa / PDF</button>
+</div>
+
+
+<div class="save-reminder-wrapper no-print">
+  <div class="save-reminder">🔔 <strong>Ricorda:</strong> premi il pulsante "Salva i dati" per riprendere il lavoro in futuro e rinomina il file come preferisci.</div>
+</div>
+
+<div id="report">
+        <div class="title-section">
+          <h1 id="istituto-report">Istituto Comprensivo</h1>
+        </div>
+        <div class="subtitle-section">
+          <h2 class="font-bold">GRIGLIA PER LA VALUTAZIONE DEL COMPORTAMENTO</h2>
+          <p><strong>ISTITUTO:</strong> <span id="istituto-print"></span></p>
+          <p>
+            <strong>QUADRIMESTRE:</strong> <span id="quadrimestre-report"></span> | 
+            <strong>CLASSE:</strong> <span id="classe-report"></span> | 
+            <strong>PLESSO:</strong> <span id="plesso-report"></span>
+          </p>
+          <p>Valutazioni concordate durante le operazioni di scrutinio del <span id="data-scrutinio"></span>.</p>
+        </div>
+        <div class="table-section">
+          <table id="tabella-risultati">
+            <thead>
+              <tr>
+                <th>N.</th>
+                <th>ALUNNO</th>
+                <th>VOTO COMPORTAMENTO</th>
+                <th>INDICATORI</th>
+                <th>NOTE</th>
+              </tr>
+            </thead>
+            <tbody>
+              <!-- Righe generate dinamicamente -->
+            </tbody>
+          </table>
+        </div>
+        <div class="signature">
+          <p class="firma-coordinatore">Per il team di classe<br>
+             Il/La coordinatore/trice: <span id="coordinatore-firma"></span>
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Footer per stampa (visibile solo in print) -->
+  <div class="print-footer">
+    <span class="left">
+      <span id="print-istituto"></span>, Plesso: <span id="print-plesso"></span>, Classe: <span id="print-classe"></span>, Sezione: <span id="print-sezione"></span>, Quadrimestre: <span id="print-quadrimestre"></span>, Valutazione Comportamento, Anno Scolastico: <span id="print-anno"></span>
+    </span>
+    <span class="right"></span>
+  </div>
+  
+  <!-- Librerie esterne tramite CDN (richiedono connessione Internet) -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js">
+    // Gestione FAB
+    const fab = document.getElementById('fab-start');
+    fab.addEventListener('click', () => {
+      document.getElementById('inizia-valutazione').scrollIntoView({behavior: 'smooth', block: 'center'});
+      document.getElementById('inizia-valutazione').classList.add('highlight-pulse');
+      setTimeout(() => document.getElementById('inizia-valutazione').classList.remove('highlight-pulse'), 1000);
+    });
+
+    // Gestione Modal di conferma inizio valutazione
+    const startModal = document.getElementById('start-confirm-modal');
+    const countSpan = document.getElementById('count-students-confirm');
+    const btnImport = document.getElementById('conferma-import');
+    const btnYes = document.getElementById('yes-start');
+    const btnNo = document.getElementById('no-start');
+
+    btnImport.addEventListener('click', () => {
+      // Imposta data nel modal da campo principale
+      const mainDate = document.getElementById('data').value;
+      const dateInput = document.getElementById('scrutinio-date-modal');
+      if (dateInput) dateInput.value = mainDate;
+
+      // Mostra numero di studenti importati
+      countSpan.textContent = studentiImportazioneTemp.length + ' studenti importati';
+      startModal.style.display = 'flex';
+    });
+    btnYes.addEventListener('click', () => {
+      // Aggiorna data scrutinio con valore scelto nel modal
+      const selectedDate = document.getElementById('scrutinio-date-modal').value;
+      if (selectedDate) {
+        datiClasse.data = selectedDate;
+        const mainDateField = document.getElementById('data');
+        if (mainDateField) mainDateField.value = selectedDate;
+      }
+
+      startModal.style.display = 'none';
+      document.getElementById('inizia-valutazione').click();
+    });
+    btnNo.addEventListener('click', () => {
+      startModal.style.display = 'none';
+    });
+
+    </script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.4.21/mammoth.browser.min.js"></script>
+  
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      
+      // Persist changes in home inputs to datiClasse
+      ['quadrimestre','classe','sezione','plesso','coordinatore','data'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.addEventListener('change', e => { datiClasse[id] = e.target.value; 
+
+    // Crea pulsante Salva e Scarica in basso a sinistra
+    const saveFab = document.createElement('button');
+    saveFab.className = 'fab-save';
+    saveFab.textContent = '💾 Salva';
+    document.body.appendChild(saveFab);
+
+    // Handler per esportare dati in JSON, anche se vuoti
+    saveFab.addEventListener('click', () => {
+      const exportData = {
+        datiClasse: datiClasse || {},
+        schoolInfo: schoolInfo || {},
+        studenti: Array.isArray(studenti) ? studenti : [],
+        valutazioniCompletate: Array.isArray(valutazioniCompletate) ? valutazioniCompletate : [],
+        noteStudenti: Array.isArray(noteStudenti) ? noteStudenti : [],
+        giudiziPersonalizzati: giudiziPersonalizzati,
+};
+      const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = 'valutazione-dati.json';
+      link.click();
+      URL.revokeObjectURL(url);
+      mostraNotifica('Dati salvati in valutazione-dati.json', 'success');
+    });
+
+});
+      });
+
+// Definizione degli indicatori e dei livelli
+      const indicatori = [
+        "Frequenza",
+        "Impegno scolastico",
+        "Interesse e partecipazione",
+        "Collaborazione",
+        "Rispetto delle regole"
+      ];
+      const livelli = [
+        { 
+          nome: "OTTIMO", 
+          descrittori: [
+            "Frequenta assiduamente.",
+            "Porta a termine le consegne rispettando con serietà e precisione i tempi e gli impegni e assume in modo autonomo e propositivo la responsabilità dei propri doveri.",
+            "Partecipa con un atteggiamento costruttivo e personale all'attività didattica.",
+            "Assume un ruolo sempre positivo all'interno del gruppo e aiuta i compagni a superare le difficoltà.",
+            "Rispetta le regole dell'istituzione scolastica e della convivenza civile e si prende molta cura del proprio materiale, rispetta quello altrui e i contesti nei quali vive le esperienze."
+          ],
+          requisiti: 5,
+          classe: "badge-ottimo"
+        },
+        { 
+          nome: "DISTINTO", 
+          descrittori: [
+            "Frequenta regolarmente.",
+            "Porta a termine le consegne con serietà rispettando sempre i tempi e gli impegni e assume in modo autonomo la responsabilità dei propri doveri.",
+            "Partecipa con interesse vivace all'attività didattica.",
+            "Mostra un ruolo collaborativo e di supporto all'interno del gruppo.",
+            "Rispetta le regole dell'istituzione scolastica e della convivenza civile e si prende cura del proprio materiale, rispetta quello altrui e i contesti nei quali vive le esperienze."
+          ],
+          requisiti: 4,
+          classe: "badge-distinto"
+        },
+        { 
+          nome: "BUONO", 
+          descrittori: [
+            "Frequenta con assenze sporadiche.",
+            "Generalmente porta a termine le consegne rispettando i tempi e gli impegni e assume la responsabilità dei propri doveri.",
+            "Partecipa con discreto interesse all'attività didattica.",
+            "Manifesta atteggiamenti cooperativi nei confronti dei compagni e degli adulti.",
+            "Rispetta le regole dell'istituzione scolastica e della convivenza civile e si prende sostanzialmente cura del proprio materiale, rispetta generalmente quello altrui e i contesti nei quali vive le esperienze."
+          ],
+          requisiti: 4,
+          classe: "badge-buono"
+        },
+        { 
+          nome: "DISCRETO", 
+          descrittori: [
+            "Frequenta in maniera discontinua.",
+            "Quasi sempre porta a termine le consegne rispettando i tempi e gli impegni e assume solitamente la responsabilità dei propri doveri.",
+            "Si interessa e partecipa in modo selettivo all'attività didattica.",
+            "Manifesta atteggiamenti sufficientemente cooperativi nei confronti dei compagni e degli adulti.",
+            "Rispetta sostanzialmente le regole dell'istituzione scolastica ma ha ricevuto alcuni richiami sul diario/registro. La cura del proprio materiale, il rispetto di quello altrui e dei contesti nei quali vive le esperienze devono essere sollecitati."
+          ],
+          requisiti: 3,
+          classe: "badge-discreto"
+        },
+        { 
+          nome: "SUFFICIENTE", 
+          descrittori: [
+            "Frequenta in maniera irregolare.",
+            "Porta a termine le consegne in modo parziale, incompleto; raramente si assume la responsabilità dei propri doveri.",
+            "Si interessa e partecipa in modo selettivo all'attività didattica se sollecitato dagli insegnanti.",
+            "Manifesta atteggiamenti poco cooperativi nei confronti dei compagni e degli adulti e non sempre è disponibile e corretto.",
+            "A volte non rispetta le regole dell'istituzione scolastica e della convivenza civile e ha ricevuto diversi richiami/annotazioni sul diario/registro. Ha scarsa cura del proprio materiale, è poco rispettoso di quello altrui e del contesto nel quale vive le esperienze."
+          ],
+          requisiti: 2,
+          classe: "badge-sufficiente"
+        },
+        { 
+          nome: "NON SUFFICIENTE", 
+          descrittori: [
+            "Frequentazione scolastica insufficiente, con ripetute assenze e ritardi che compromettono il percorso formativo.",
+            "Non rispetta le consegne e non si assume la responsabilità dei propri doveri.",
+            "Non mostra interesse e partecipazione all'attività didattica e al dialogo educativo disturbando in modo continuo e frequente il lavoro comune.",
+            "Manifesta atteggiamenti di intolleranza e non cooperazione nei confronti di compagni e adulti.",
+            "Non rispetta le regole dell'istituzione scolastica e della convivenza civile e ha ricevuto numerose o gravi richiami/annotazioni sul diario/registro. Non ha cura del proprio materiale, non è rispettoso di quello altrui e del contesto nel quale vive le esperienze."
+          ],
+          requisiti: 2,
+          classe: "badge-nonsufficiente"
+        }
+      ];
+      
+      // Dati della classe
+      let datiClasse = {
+        quadrimestre: '',
+        classe: '',
+        plesso: '',
+        data: new Date().toISOString().split('T')[0],
+        coordinatore: ''
+      , sezione: ""};
+
+      // Informazioni scolastiche
+      let schoolInfo = {
+        istituto: '',
+        plesso: '',
+        annoScolastico: ''
+      };
+
+      let studenti = [];
+      let valutazioniCompletate = [];
+      let noteStudenti = [];
+      let studenteAttuale = 0;
+      let giudiziPersonalizzati = [];
+      let studentiImportazioneTemp = [];
+      
+      // Funzione per normalizzare il valore di giudizio per le classi CSS
+      function normalizzaGiudizioCSS(giudizio) {
+        // Per le classi CSS, usa l'underscore
+        return giudizio.replace(' ', '_');
+      }
+
+      // Inizializza la data
+      if (!document.getElementById('data').value) {
+        document.getElementById('data').value = datiClasse.data;
+      }
+      
+      // Imposta anno scolastico predefinito
+      const annoCorrente = new Date().getFullYear();
+      const annoScolastico = `${annoCorrente}/${annoCorrente + 1}`;
+      document.getElementById('anno-scolastico').value = annoScolastico;
+      
+      // Carica informazioni scolastiche
+      try {
+        const savedSchoolInfo = localStorage.getItem('schoolInfo');
+        if (savedSchoolInfo) {
+          schoolInfo = JSON.parse(savedSchoolInfo);
+          updateSchoolInfoDisplay();
+        } else {
+          // Se non ci sono informazioni salvate, mostra il modal
+          document.getElementById('school-info-modal').style.display = 'flex';
+        }
+      } catch (e) {
+        console.error("Errore nel caricamento delle informazioni scolastiche:", e);
+        document.getElementById('school-info-modal').style.display = 'flex';
+      }
+
+      // Funzione per aggiornare la visualizzazione delle informazioni scolastiche
+      function updateSchoolInfoDisplay() {
+        document.getElementById('header-school').textContent = schoolInfo.istituto || 'Informazioni scuola (clicca per modificare)';
+        document.getElementById('plesso').value = schoolInfo.plesso || '';
+        document.getElementById('istituto-report').textContent = schoolInfo.istituto || 'Istituto Comprensivo';
+        document.getElementById('print-istituto').textContent = schoolInfo.istituto || 'Istituto Comprensivo';
+        document.getElementById('print-anno').textContent = schoolInfo.annoScolastico || '';
+      }
+
+      // Event listener per il salvataggio delle informazioni scolastiche
+      document.getElementById('salva-info-scuola').addEventListener('click', function() {
+        // Recupera dati aggiuntivi
+        datiClasse.classe = document.getElementById('classe-modal').value.trim();
+        datiClasse.sezione = document.getElementById('sezione-modal').value.trim();
+        datiClasse.coordinatore = document.getElementById('coordinatore-modal').value.trim();
+        // Aggiorna home page
+        const homeClasse = document.getElementById('classe');
+        if (homeClasse) homeClasse.value = datiClasse.classe;
+        const homeSezione = document.getElementById('sezione');
+        if (homeSezione) homeSezione.value = datiClasse.sezione;
+        const homeCoordinatore = document.getElementById('coordinatore');
+        if (homeCoordinatore) homeCoordinatore.value = datiClasse.coordinatore;
+        // Quadrimestre dal modal
+        datiClasse.quadrimestre = document.getElementById('quadrimestre-modal').value;
+        const homeQ = document.getElementById('quadrimestre');
+        if(homeQ) homeQ.value = datiClasse.quadrimestre;
+
+
+        schoolInfo.istituto = document.getElementById('istituto').value.trim();
+        schoolInfo.plesso = document.getElementById('plesso-modal').value.trim();
+        // Imposta campi aggiuntivi nel modal
+        document.getElementById('classe-modal').value = datiClasse.classe;
+        document.getElementById('sezione-modal').value = datiClasse.sezione;
+        document.getElementById('coordinatore-modal').value = schoolInfo.coordinatore || datiClasse.coordinatore;
+
+        schoolInfo.annoScolastico = document.getElementById('anno-scolastico').value.trim() || annoScolastico;
+        
+        
+        // Imposta quadrimestre nel modal
+        const qm = document.getElementById('quadrimestre-modal'); if(qm) qm.value = datiClasse.quadrimestre;
+if (!schoolInfo.istituto) {
+          mostraNotifica('Inserisci almeno il nome dell\'Istituto', 'error');
+          return;
+        }
+        
+        // Salva in localStorage
+        localStorage.setItem('schoolInfo', JSON.stringify(schoolInfo));
+        
+        // Aggiorna visualizzazione
+        updateSchoolInfoDisplay();
+        
+        // Aggiorna anche il campo plesso nel form principale se è stato inserito
+        if (schoolInfo.plesso) {
+          document.getElementById('plesso').value = schoolInfo.plesso;
+        }
+        
+        // Chiudi il modal
+        document.getElementById('school-info-modal').style.display = 'none';
+        
+        mostraNotifica('Informazioni scolastiche salvate con successo!', 'success');
+      });
+
+      // Event listener per l'importazione delle informazioni scolastiche
+      document.getElementById('importa-scuola').addEventListener('click', function() {
+        // Utilizza il meccanismo di import della home page
+        document.getElementById('file-import-dati').click();
+        // Chiudi il modal delle informazioni scolastiche
+        document.getElementById('school-info-modal').style.display = 'none';
+      });
+      
+      // Apri il modal delle informazioni scolastiche quando si clicca sull'intestazione
+      document.getElementById('header-school').addEventListener('click', function() {
+        // Aggiorna i campi nel modal con i valori attuali
+        document.getElementById('istituto').value = schoolInfo.istituto || '';
+        document.getElementById('plesso-modal').value = schoolInfo.plesso || '';
+        document.getElementById('anno-scolastico').value = schoolInfo.annoScolastico || annoScolastico;
+        
+        // Mostra il modal
+        // Popola data scrutinio nel modal
+        var mainDate = document.getElementById('data').value;
+        if (mainDate) { document.getElementById('data-scrutinio-modal').value = mainDate; }
+        // Mostra il modal
+        document.getElementById('school-info-modal').style.display = 'flex';
+      });
+      
+      /* EVENTI PER IMPORTARE DATI SALVATI (JSON) */
+      document.getElementById('importa-dati-salvati').addEventListener('click', function() {
+        document.getElementById('file-import-dati').click();
+      });
+      
+      document.getElementById('file-import-dati').addEventListener('change', function(e) {
+        // Dopo import JSON aggiorna i campi aggiuntivi Classe, Sezione, Coordinatore
+        if (data.datiClasse) {
+          // Popola quadrimestre
+          const homeQ = document.getElementById('quadrimestre');
+          if(homeQ) homeQ.value = data.datiClasse.quadrimestre || '';
+          const modalQ = document.getElementById('quadrimestre-modal');
+          if(modalQ) modalQ.value = data.datiClasse.quadrimestre || '';
+          // Home
+          const homeClasse = document.getElementById('classe');
+          const homeSezione = document.getElementById('sezione');
+          const homeCoord = document.getElementById('coordinatore');
+          if (homeClasse) homeClasse.value = data.datiClasse.classe || '';
+          if (homeSezione) homeSezione.value = data.datiClasse.sezione || '';
+          if (homeCoord) homeCoord.value = data.datiClasse.coordinatore || '';
+          // Modal
+          const modClasse = document.getElementById('classe-modal');
+          const modSezione = document.getElementById('sezione-modal');
+          const modCoord = document.getElementById('coordinatore-modal');
+          if (modClasse) modClasse.value = data.datiClasse.classe || '';
+          if (modSezione) modSezione.value = data.datiClasse.sezione || '';
+          if (modCoord) modCoord.value = data.datiClasse.coordinatore || '';
+        }
+
+        const file = e.target.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = function(evt) {
+          try {
+            const data = JSON.parse(evt.target.result);
+
+            if (data.valutazioniCompletate && Array.isArray(data.valutazioniCompletate)) {
+              // Fai una copia profonda per evitare riferimenti
+              valutazioniCompletate = JSON.parse(JSON.stringify(data.valutazioniCompletate));
+            }
+            if (data.noteStudenti && Array.isArray(data.noteStudenti)) {
+              noteStudenti = [...data.noteStudenti];
+            }
+
+            // Copia profonda dei dati della classe
+            datiClasse = JSON.parse(JSON.stringify(data.datiClasse));
+            studenti = [...data.studenti];
+
+            // Se ci sono valutazioni esistenti, chiedi se vuoi riprendere
+            const valutateParzialmente = valutazioniCompletate.some(v => v.some(x => x !== null));
+            if (valutateParzialmente) {
+              if (confirm("Sono state trovate valutazioni precedenti. Vuoi riprendere da dove avevi lasciato?")) {
+                studenteAttuale = valutazioniCompletate.findIndex(v => v.includes(null));
+                if (studenteAttuale === -1) studenteAttuale = 0;
+                document.getElementById('inserimento-view').style.display = 'none';
+                document.getElementById('valutazione-view').style.display = 'block';
+                aggiornaVistaValutazione();
+              }
+            }
+            
+            // Aggiorna i campi nella home
+            document.getElementById('quadrimestre').value = datiClasse.quadrimestre;
+            document.getElementById('classe').value = datiClasse.classe;
+            document.getElementById('plesso').value = datiClasse.plesso;
+            document.getElementById('data').value = datiClasse.data;
+            document.getElementById('coordinatore').value = datiClasse.coordinatore;
+            
+            // Se il file contiene informazioni sulla scuola, importale anche
+            if (data.schoolInfo) {
+              schoolInfo = JSON.parse(JSON.stringify(data.schoolInfo));
+              localStorage.setItem('schoolInfo', JSON.stringify(schoolInfo));
+              updateSchoolInfoDisplay();
+            }
+            // Carica overrides di giudizio
+            if (data.giudiziPersonalizzati && Array.isArray(data.giudiziPersonalizzati)) {
+              giudiziPersonalizzati = [...data.giudiziPersonalizzati];
+            }
+            
+            aggiornaListaStudenti();
+            
+      // Funzione per modifica manuale del giudizio
+      function modificaGiudizio(studenteIndex) {
+        const attuale = calcolaGiudizioFinale(valutazioniCompletate[studenteIndex], studenteIndex);
+        const opzioni = [
+              { value: '',               label: '🔄 Ripristina automatico' },
+              { value: 'OTTIMO',         label: 'OTTIMO' },
+              { value: 'DISTINTO',       label: 'DISTINTO' },
+              { value: 'BUONO',          label: 'BUONO' },
+              { value: 'DISCRETO',       label: 'DISCRETO' },
+              { value: 'SUFFICIENTE',    label: 'SUFFICIENTE' },
+              { value: 'NON SUFFICIENTE',label: 'NON SUFFICIENTE' }
+            ];
+
+        const modal = document.createElement('div');
+        modal.className = 'modal-overlay';
+        modal.style.display = 'flex';
+        modal.innerHTML = `
+          <div class="modal-content">
+            <button class="close-modal">&times;</button>
+            <h2>Modifica Giudizio</h2>
+            <p><strong>${studenti[studenteIndex]}</strong>: da <em>${attuale}</em></p>
+            <div class="form-group">
+              <select id="override-select"></select>
+            </div>
+            <div style="text-align:right; margin-top:1rem;">
+              <button id="annulla" class="btn-gray">Annulla</button>
+              <button id="conferma" class="btn-green">Conferma</button>
+            </div>
+          </div>`;
+        document.body.appendChild(modal);
+
+        const select = modal.querySelector('#override-select');
+        opzioni.forEach(o => {
+              const opt = document.createElement('option');
+              opt.value = o.value;
+              opt.text = o.label;
+              if (o.value === attuale) opt.selected = true;
+              select.appendChild(opt);
+            });
+
+        modal.querySelector('.close-modal').onclick =
+        modal.querySelector('#annulla').onclick = () => modal.remove();
+
+        modal.querySelector('#conferma').onclick = () => {
+              const scelta = select.value;
+              if (scelta === '') {
+                delete giudiziPersonalizzati[studenteIndex];
+              } else {
+                giudiziPersonalizzati[studenteIndex] = scelta;
+              }
+              modal.remove();
+              aggiornaVistaRisultati();
+              mostraNotifica(
+                scelta === ''
+                  ? `Giudizio di ${studenti[studenteIndex]} ripristinato al calcolo automatico`
+                  : `Giudizio di ${studenti[studenteIndex]} aggiornato a ${scelta}`,
+                'success'
+              );
+            };
+      }
+mostraNotifica("Dati importati con successo!", "success");
+            // Nascondi il FAB
+            const fabBtn = document.querySelector('.fab-start');
+            if (fabBtn) fabBtn.style.display = 'none';
+            // Secondo banner (successo) dopo 1s
+            setTimeout(function() {
+                mostraNotifica(`Iniziata valutazione per ${studenti.length} studenti`, "success");
+            }, 1000);
+            // Avvia fase valutazione
+            document.getElementById('inizia-valutazione').click();
+          } catch (error) {
+            console.error(error);
+            mostraNotifica("Errore nell'importazione dei dati salvati: " + error.message, "error");
+          }
+        };
+        
+        reader.readAsText(file);
+      });
+      
+      // Aggiungi studente singolo
+      document.getElementById('aggiungi-studente').addEventListener('click', aggiungiStudente);
+      
+      // Tasto enter per aggiungere studente
+      document.getElementById('nuovo-studente').addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') {
+          aggiungiStudente();
+        }
+      });
+      
+      function aggiungiStudente() {
+        const nuovoStudenteInput = document.getElementById('nuovo-studente');
+        const nomeStudente = nuovoStudenteInput.value.trim();
+        
+        if (!nomeStudente) {
+          mostraNotifica('Inserisci il nome dello studente', 'error');
+          return;
+        }
+        
+        // Verifica se lo studente esiste già
+        if (studenti.findIndex(s => s.toLowerCase() === nomeStudente.toLowerCase()) !== -1) {
+          mostraNotifica(`Lo studente "${nomeStudente}" è già presente.`, "error");
+          return;
+        }
+        
+        studenti.push(nomeStudente);
+        valutazioniCompletate.push(Array(indicatori.length).fill(null));
+        noteStudenti.push('');
+        nuovoStudenteInput.value = '';
+        aggiornaListaStudenti();
+        
+        
+      // Funzione per modifica manuale del giudizio
+      function modificaGiudizio(studenteIndex) {
+        const attuale = calcolaGiudizioFinale(valutazioniCompletate[studenteIndex], studenteIndex);
+        const opzioni = [
+              { value: '',               label: '🔄 Ripristina automatico' },
+              { value: 'OTTIMO',         label: 'OTTIMO' },
+              { value: 'DISTINTO',       label: 'DISTINTO' },
+              { value: 'BUONO',          label: 'BUONO' },
+              { value: 'DISCRETO',       label: 'DISCRETO' },
+              { value: 'SUFFICIENTE',    label: 'SUFFICIENTE' },
+              { value: 'NON SUFFICIENTE',label: 'NON SUFFICIENTE' }
+            ];
+
+        const modal = document.createElement('div');
+        modal.className = 'modal-overlay';
+        modal.style.display = 'flex';
+        modal.innerHTML = `
+          <div class="modal-content">
+            <button class="close-modal">&times;</button>
+            <h2>Modifica Giudizio</h2>
+            <p><strong>${studenti[studenteIndex]}</strong>: da <em>${attuale}</em></p>
+            <div class="form-group">
+              <select id="override-select"></select>
+            </div>
+            <div style="text-align:right; margin-top:1rem;">
+              <button id="annulla" class="btn-gray">Annulla</button>
+              <button id="conferma" class="btn-green">Conferma</button>
+            </div>
+          </div>`;
+        document.body.appendChild(modal);
+
+        const select = modal.querySelector('#override-select');
+        opzioni.forEach(o => {
+              const opt = document.createElement('option');
+              opt.value = o.value;
+              opt.text = o.label;
+              if (o.value === attuale) opt.selected = true;
+              select.appendChild(opt);
+            });
+
+        modal.querySelector('.close-modal').onclick =
+        modal.querySelector('#annulla').onclick = () => modal.remove();
+
+        modal.querySelector('#conferma').onclick = () => {
+              const scelta = select.value;
+              if (scelta === '') {
+                delete giudiziPersonalizzati[studenteIndex];
+              } else {
+                giudiziPersonalizzati[studenteIndex] = scelta;
+              }
+              modal.remove();
+              aggiornaVistaRisultati();
+              mostraNotifica(
+                scelta === ''
+                  ? `Giudizio di ${studenti[studenteIndex]} ripristinato al calcolo automatico`
+                  : `Giudizio di ${studenti[studenteIndex]} aggiornato a ${scelta}`,
+                'success'
+              );
+            };
+      }
+mostraNotifica(`Studente "${nomeStudente}" aggiunto!`, "success");
+      }
+      
+      // Elimina tutti gli studenti
+      document.getElementById('elimina-tutti').addEventListener('click', function() {
+        if (confirm('Sei sicuro di voler eliminare tutti gli studenti?')) {
+          studenti = [];
+          valutazioniCompletate = [];
+          noteStudenti = [];
+          aggiornaListaStudenti();
+          
+      // Funzione per modifica manuale del giudizio
+      function modificaGiudizio(studenteIndex) {
+        const attuale = calcolaGiudizioFinale(valutazioniCompletate[studenteIndex], studenteIndex);
+        const opzioni = [
+              { value: '',               label: '🔄 Ripristina automatico' },
+              { value: 'OTTIMO',         label: 'OTTIMO' },
+              { value: 'DISTINTO',       label: 'DISTINTO' },
+              { value: 'BUONO',          label: 'BUONO' },
+              { value: 'DISCRETO',       label: 'DISCRETO' },
+              { value: 'SUFFICIENTE',    label: 'SUFFICIENTE' },
+              { value: 'NON SUFFICIENTE',label: 'NON SUFFICIENTE' }
+            ];
+
+        const modal = document.createElement('div');
+        modal.className = 'modal-overlay';
+        modal.style.display = 'flex';
+        modal.innerHTML = `
+          <div class="modal-content">
+            <button class="close-modal">&times;</button>
+            <h2>Modifica Giudizio</h2>
+            <p><strong>${studenti[studenteIndex]}</strong>: da <em>${attuale}</em></p>
+            <div class="form-group">
+              <select id="override-select"></select>
+            </div>
+            <div style="text-align:right; margin-top:1rem;">
+              <button id="annulla" class="btn-gray">Annulla</button>
+              <button id="conferma" class="btn-green">Conferma</button>
+            </div>
+          </div>`;
+        document.body.appendChild(modal);
+
+        const select = modal.querySelector('#override-select');
+        opzioni.forEach(o => {
+              const opt = document.createElement('option');
+              opt.value = o.value;
+              opt.text = o.label;
+              if (o.value === attuale) opt.selected = true;
+              select.appendChild(opt);
+            });
+
+        modal.querySelector('.close-modal').onclick =
+        modal.querySelector('#annulla').onclick = () => modal.remove();
+
+        modal.querySelector('#conferma').onclick = () => {
+              const scelta = select.value;
+              if (scelta === '') {
+                delete giudiziPersonalizzati[studenteIndex];
+              } else {
+                giudiziPersonalizzati[studenteIndex] = scelta;
+              }
+              modal.remove();
+              aggiornaVistaRisultati();
+              mostraNotifica(
+                scelta === ''
+                  ? `Giudizio di ${studenti[studenteIndex]} ripristinato al calcolo automatico`
+                  : `Giudizio di ${studenti[studenteIndex]} aggiornato a ${scelta}`,
+                'success'
+              );
+            };
+      }
+mostraNotifica("Tutti gli studenti sono stati rimossi.", "info");
+        }
+      });
+      
+      // Tab per import studenti
+      document.querySelectorAll('.tab').forEach(tab => {
+        tab.addEventListener('click', function() {
+          const tabId = this.getAttribute('data-tab');
+          
+          // Rimuovi active da tutti i tab
+          document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+          document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+          
+          // Aggiungi active al tab cliccato
+          this.classList.add('active');
+          document.getElementById(tabId).classList.add('active');
+        });
+      });
+      
+      // Importa da testo
+      document.getElementById('importa-da-testo').addEventListener('click', importaDaTesto);
+      
+      function importaDaTesto() {
+        const testo = document.getElementById('paste-area').value.trim();
+        if (!testo) { 
+          mostraNotifica("Incolla prima l'elenco degli studenti.", "error"); 
+          return; 
+        }
+        
+        const righe = testo.split('\n').map(riga => riga.trim()).filter(r => r);
+        if (!righe.length) { 
+          mostraNotifica("Nessuno studente trovato.", "error"); 
+          return; 
+        }
+        
+        mostraAnteprimaImportazione(righe);
+      }
+      
+      // Importa da file
+      document.getElementById('importa-da-file').addEventListener('click', importaDaFile);
+      
+      function importaDaFile() {
+        const fileInput = document.getElementById('file-import');
+        const file = fileInput.files[0];
+        
+        if (!file) {
+          mostraNotifica('Seleziona un file da importare', 'error');
+          return;
+        }
+        
+        const fileExtension = file.name.split('.').pop().toLowerCase();
+        
+        if (['txt', 'csv'].includes(fileExtension)) {
+          // Testo semplice o CSV
+          const reader = new FileReader();
+          reader.onload = function(e) {
+            const content = e.target.result;
+            elaboraTestoImportazione(content);
+          };
+          reader.readAsText(file);
+        } else if (['xlsx', 'xls'].includes(fileExtension)) {
+          // Excel
+          const reader = new FileReader();
+          reader.onload = function(e) {
+            const data = new Uint8Array(e.target.result);
+            elaboraExcelImportazione(data);
+          };
+          reader.readAsArrayBuffer(file);
+        } else if (fileExtension === 'docx') {
+          // Word
+          const reader = new FileReader();
+          reader.onload = function(e) {
+            elaboraWordImportazione(e.target.result);
+          };
+          reader.readAsArrayBuffer(file);
+        } else {
+          mostraNotifica('Formato file non supportato', 'error');
+        }
+      }
+      
+      function elaboraTestoImportazione(testo) {
+        const righe = testo.split('\n').map(riga => riga.trim()).filter(r => r);
+        if (!righe.length) { 
+          mostraNotifica("Nessuno studente trovato.", "error"); 
+          return; 
+        }
+        if (righe[0].includes(',') || righe[0].includes(';')) {
+          const delim = righe[0].includes(',') ? ',' : ';';
+          const nomi = [];
+          const start = (["nome","cognome","studente","alunno"].some(x => righe[0].toLowerCase().includes(x))) ? 1 : 0;
+          for (let i=start; i<righe.length; i++) {
+            const cols = righe[i].split(delim);
+            if (cols[0].trim()) nomi.push(cols[0].trim());
+          }
+          if (!nomi.length) { 
+            mostraNotifica("Nessuno studente nel CSV.", "error"); 
+            return; 
+          }
+          mostraAnteprimaImportazione(nomi);
+        } else {
+          mostraAnteprimaImportazione(righe);
+        }
+      }
+      
+      function elaboraExcelImportazione(data) {
+        try {
+          const workbook = XLSX.read(data);
+          const nomi = [];
+          const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+          const jsonData = XLSX.utils.sheet_to_json(firstSheet, { header: 1 });
+          const start = (jsonData[0] && ["nome","cognome","studente","alunno"].some(x => String(jsonData[0][0]).toLowerCase().includes(x))) ? 1 : 0;
+          for (let i = start; i < jsonData.length; i++) {
+            if (jsonData[i][0] && String(jsonData[i][0]).trim()) nomi.push(String(jsonData[i][0]).trim());
+          }
+          if (!nomi.length) { 
+            mostraNotifica("Nessuno studente nel file Excel.", "error"); 
+            return; 
+          }
+          mostraAnteprimaImportazione(nomi);
+        } catch (error) { 
+          console.error(error); 
+          mostraNotifica("Errore nel file Excel.", "error"); 
+        }
+      }
+      
+      function elaboraWordImportazione(arrayBuffer) {
+        mammoth.extractRawText({arrayBuffer: arrayBuffer})
+          .then(function(result) {
+            const text = result.value;
+            const nomi = text.split(/[\r\n]+/).map(n => n.trim()).filter(n => n);
+            if (nomi.length > 0) {
+              mostraAnteprimaImportazione(nomi);
+            } else {
+              mostraNotifica('Nessuno studente trovato nel documento Word', 'error');
+            }
+          })
+          .catch(function(err) {
+            console.error(err);
+            mostraNotifica('Errore nella lettura del file Word', 'error');
+          });
+      }
+      
+      // Mostra modal di conferma importazione
+      function mostraAnteprimaImportazione(nomi) {
+        // Filtra studenti già presenti
+        studentiImportazioneTemp = nomi.filter(nome => 
+          !studenti.some(s => s.toLowerCase() === nome.toLowerCase())
+        );
+        
+        if (studentiImportazioneTemp.length === 0) {
+          mostraNotifica("Tutti gli studenti sono già presenti nell'elenco.", "info");
+          return;
+        }
+        
+        document.getElementById('num-studenti-import').textContent = studentiImportazioneTemp.length;
+        
+        // Popola lista anteprima
+        const listaAnteprima = document.getElementById('anteprima-studenti');
+        listaAnteprima.innerHTML = '';
+        studentiImportazioneTemp.forEach(nome => {
+          const li = document.createElement('li');
+          li.textContent = nome;
+          li.style.padding = "6px 0";
+          li.style.borderBottom = "1px solid #eee";
+          listaAnteprima.appendChild(li);
+        });
+        
+        // Mostra modal
+        document.getElementById('import-modal').style.display = 'flex';
+      }
+      
+      // Conferma importazione
+      document.getElementById('conferma-import').addEventListener('click', function() {
+        const numStudenti = studentiImportazioneTemp.length;
+        studentiImportazioneTemp.forEach(studente => {
+          studenti.push(studente);
+          valutazioniCompletate.push(Array(indicatori.length).fill(null));
+          noteStudenti.push('');
+        });
+        
+        document.getElementById('import-modal').style.display = 'none';
+        document.getElementById('paste-area').value = '';
+        document.getElementById('file-import').value = '';
+        if (document.getElementById('file-import-info')) {
+          document.getElementById('file-import-info').innerHTML = '';
+          document.getElementById('file-import-info').classList.add('hidden');
+        }
+        
+        aggiornaListaStudenti();
+        
+      // Funzione per modifica manuale del giudizio
+      function modificaGiudizio(studenteIndex) {
+        const attuale = calcolaGiudizioFinale(valutazioniCompletate[studenteIndex], studenteIndex);
+        const opzioni = [
+              { value: '',               label: '🔄 Ripristina automatico' },
+              { value: 'OTTIMO',         label: 'OTTIMO' },
+              { value: 'DISTINTO',       label: 'DISTINTO' },
+              { value: 'BUONO',          label: 'BUONO' },
+              { value: 'DISCRETO',       label: 'DISCRETO' },
+              { value: 'SUFFICIENTE',    label: 'SUFFICIENTE' },
+              { value: 'NON SUFFICIENTE',label: 'NON SUFFICIENTE' }
+            ];
+
+        const modal = document.createElement('div');
+        modal.className = 'modal-overlay';
+        modal.style.display = 'flex';
+        modal.innerHTML = `
+          <div class="modal-content">
+            <button class="close-modal">&times;</button>
+            <h2>Modifica Giudizio</h2>
+            <p><strong>${studenti[studenteIndex]}</strong>: da <em>${attuale}</em></p>
+            <div class="form-group">
+              <select id="override-select"></select>
+            </div>
+            <div style="text-align:right; margin-top:1rem;">
+              <button id="annulla" class="btn-gray">Annulla</button>
+              <button id="conferma" class="btn-green">Conferma</button>
+            </div>
+          </div>`;
+        document.body.appendChild(modal);
+
+        const select = modal.querySelector('#override-select');
+        opzioni.forEach(o => {
+              const opt = document.createElement('option');
+              opt.value = o.value;
+              opt.text = o.label;
+              if (o.value === attuale) opt.selected = true;
+              select.appendChild(opt);
+            });
+
+        modal.querySelector('.close-modal').onclick =
+        modal.querySelector('#annulla').onclick = () => modal.remove();
+
+        modal.querySelector('#conferma').onclick = () => {
+              const scelta = select.value;
+              if (scelta === '') {
+                delete giudiziPersonalizzati[studenteIndex];
+              } else {
+                giudiziPersonalizzati[studenteIndex] = scelta;
+              }
+              modal.remove();
+              aggiornaVistaRisultati();
+              mostraNotifica(
+                scelta === ''
+                  ? `Giudizio di ${studenti[studenteIndex]} ripristinato al calcolo automatico`
+                  : `Giudizio di ${studenti[studenteIndex]} aggiornato a ${scelta}`,
+                'success'
+              );
+            };
+      }
+mostraNotifica(`${numStudenti} studenti importati con successo!`, "success");
+      });
+      
+      // Annulla importazione
+      document.getElementById('annulla-import').addEventListener('click', function() {
+        document.getElementById('import-modal').style.display = 'none';
+        studentiImportazioneTemp = [];
+      });
+      
+      // Inizia valutazione
+      document.getElementById('inizia-valutazione').addEventListener('click', function() {
+        // Raccogli dati classe
+        datiClasse.quadrimestre = document.getElementById('quadrimestre').value;
+        datiClasse.classe = document.getElementById('classe').value;
+        datiClasse.plesso = document.getElementById('plesso').value;
+        datiClasse.data = document.getElementById('data').value;
+        datiClasse.coordinatore = document.getElementById('coordinatore').value;
+        
+        // Controlla campi obbligatori
+        if (!datiClasse.quadrimestre || !datiClasse.classe || !datiClasse.plesso || !datiClasse.coordinatore) {
+          mostraNotifica('Compila tutti i campi obbligatori (Quadrimestre, Classe, Plesso, Coordinatore)', 'error');
+          return;
+        }
+        
+        // Controlla se ci sono studenti
+        if (studenti.length === 0) {
+          mostraNotifica('Inserisci almeno uno studente', 'error');
+          return;
+        }
+        
+        // Inizializza valutazioni se non esistono
+        if (valutazioniCompletate.length !== studenti.length) {
+          valutazioniCompletate = Array(studenti.length).fill().map(() => Array(indicatori.length).fill(null));
+          noteStudenti = Array(studenti.length).fill('');
+        }
+        
+        // Naviga alla vista valutazione
+        document.getElementById('inserimento-view').style.display = 'none';
+        document.getElementById('valutazione-view').style.display = 'block';
+        document.getElementById('risultati-view').style.display = 'none';
+        
+        // Aggiorna vista valutazione
+        aggiornaVistaValutazione();
+        mostraNotifica(`Iniziata valutazione per ${studenti.length} studenti`, "success");
+      });
+      
+      // Aggiorna lista studenti UI
+      function aggiornaListaStudenti() {
+        const listaStudenti = document.getElementById('lista-studenti');
+        const noStudenti = document.getElementById('no-studenti');
+        const eliminaTutti = document.getElementById('elimina-tutti');
+        const contatore = document.getElementById('studenti-counter');
+        
+        // Aggiorna il contatore
+        contatore.textContent = `Totale: ${studenti.length} studenti`;
+        
+        if (studenti.length === 0) {
+          listaStudenti.innerHTML = '';
+          noStudenti.style.display = 'block';
+          eliminaTutti.style.display = 'none';
+        } else {
+          noStudenti.style.display = 'none';
+          eliminaTutti.style.display = 'block';
+          
+          listaStudenti.innerHTML = '';
+          studenti.forEach((studente, index) => {
+            const li = document.createElement('li');
+            
+            const nomeSpan = document.createElement('span');
+            nomeSpan.textContent = `${index + 1}. ${studente}`;
+            nomeSpan.className = 'font-medium';
+            
+            const btnElimina = document.createElement('button');
+            btnElimina.className = 'btn-red';
+            btnElimina.style.padding = '5px 10px';
+            btnElimina.style.fontSize = '0.9rem';
+            btnElimina.textContent = 'Rimuovi';
+            btnElimina.onclick = function() { eliminaStudente(index); };
+            
+            li.appendChild(nomeSpan);
+            li.appendChild(btnElimina);
+            listaStudenti.appendChild(li);
+          });
+        }
+      }
+      
+      // Elimina studente
+      function eliminaStudente(index) {
+        const nomeStudente = studenti[index];
+        if (confirm(`Sei sicuro di voler eliminare ${nomeStudente}?`)) {
+          studenti.splice(index, 1);
+          valutazioniCompletate.splice(index, 1);
+          noteStudenti.splice(index, 1);
+          aggiornaListaStudenti();
+          
+      // Funzione per modifica manuale del giudizio
+      function modificaGiudizio(studenteIndex) {
+        const attuale = calcolaGiudizioFinale(valutazioniCompletate[studenteIndex], studenteIndex);
+        const opzioni = [
+              { value: '',               label: '🔄 Ripristina automatico' },
+              { value: 'OTTIMO',         label: 'OTTIMO' },
+              { value: 'DISTINTO',       label: 'DISTINTO' },
+              { value: 'BUONO',          label: 'BUONO' },
+              { value: 'DISCRETO',       label: 'DISCRETO' },
+              { value: 'SUFFICIENTE',    label: 'SUFFICIENTE' },
+              { value: 'NON SUFFICIENTE',label: 'NON SUFFICIENTE' }
+            ];
+
+        const modal = document.createElement('div');
+        modal.className = 'modal-overlay';
+        modal.style.display = 'flex';
+        modal.innerHTML = `
+          <div class="modal-content">
+            <button class="close-modal">&times;</button>
+            <h2>Modifica Giudizio</h2>
+            <p><strong>${studenti[studenteIndex]}</strong>: da <em>${attuale}</em></p>
+            <div class="form-group">
+              <select id="override-select"></select>
+            </div>
+            <div style="text-align:right; margin-top:1rem;">
+              <button id="annulla" class="btn-gray">Annulla</button>
+              <button id="conferma" class="btn-green">Conferma</button>
+            </div>
+          </div>`;
+        document.body.appendChild(modal);
+
+        const select = modal.querySelector('#override-select');
+        opzioni.forEach(o => {
+              const opt = document.createElement('option');
+              opt.value = o.value;
+              opt.text = o.label;
+              if (o.value === attuale) opt.selected = true;
+              select.appendChild(opt);
+            });
+
+        modal.querySelector('.close-modal').onclick =
+        modal.querySelector('#annulla').onclick = () => modal.remove();
+
+        modal.querySelector('#conferma').onclick = () => {
+              const scelta = select.value;
+              if (scelta === '') {
+                delete giudiziPersonalizzati[studenteIndex];
+              } else {
+                giudiziPersonalizzati[studenteIndex] = scelta;
+              }
+              modal.remove();
+              aggiornaVistaRisultati();
+              mostraNotifica(
+                scelta === ''
+                  ? `Giudizio di ${studenti[studenteIndex]} ripristinato al calcolo automatico`
+                  : `Giudizio di ${studenti[studenteIndex]} aggiornato a ${scelta}`,
+                'success'
+              );
+            };
+      }
+mostraNotifica(`Studente "${nomeStudente}" rimosso`, "info");
+        }
+      }
+      
+      // Aggiorna vista valutazione
+      function aggiornaVistaValutazione() {
+        if (studenti.length === 0) {
+          mostraNotifica('Nessuno studente da valutare', 'error');
+          document.getElementById('inserimento-view').style.display = 'block';
+          document.getElementById('valutazione-view').style.display = 'none';
+          return;
+        }
+        
+        if (studenteAttuale < 0) studenteAttuale = 0;
+        if (studenteAttuale >= studenti.length) studenteAttuale = studenti.length - 1;
+        
+        // Aggiorna nome studente
+                document.getElementById('nome-studente-nav').textContent = `Stai valutando: ${studenti[studenteAttuale]}`;
+document.getElementById('nome-studente-attuale').textContent = studenti[studenteAttuale];
+        document.getElementById('note-studente-nome').textContent = studenti[studenteAttuale];
+        
+        // Aggiorna progresso
+        document.getElementById('progress-studente').textContent = 
+          `Studente ${studenteAttuale + 1} di ${studenti.length}`;
+        
+        // Aggiorna barra progresso
+        const progress = (studenteAttuale + 1) / studenti.length * 100;
+        document.getElementById('progress-bar').style.width = `${progress}%`;
+        
+        // Gestione pulsanti prev/next
+        document.getElementById('prev-studente').disabled = studenteAttuale === 0;
+        document.getElementById('prev-studente').style.opacity = studenteAttuale === 0 ? 0.5 : 1;
+        document.getElementById('next-studente').textContent = 
+          studenteAttuale === studenti.length - 1 ? 'Completa valutazione →' : 'Studente successivo →';
+        
+        // Aggiorna note
+        document.getElementById('note-studente').value = noteStudenti[studenteAttuale] || '';
+        
+        // Costruisci tabella valutazione
+        costruisciTabellaValutazione();
+        
+        // Aggiorna giudizio finale inline
+        aggiornaGiudizioFinale();
+      }
+      
+      // Costruisci tabella valutazione
+      function costruisciTabellaValutazione() {
+        const tabella = document.getElementById('tabella-valutazione');
+        
+        // Pulisci tabella
+        const thead = tabella.querySelector('thead tr');
+        thead.innerHTML = '<th style="width: 16%;">Indicatore</th>';
+        
+        // Aggiungi intestazioni livelli
+        livelli.forEach(livello => {
+          const th = document.createElement('th');
+          th.textContent = livello.nome;
+          thead.appendChild(th);
+        });
+        
+        // Pulisci corpo tabella
+        const tbody = tabella.querySelector('tbody');
+        tbody.innerHTML = '';
+        
+        // Aggiungi righe per ogni indicatore
+        indicatori.forEach((indicatore, indiceIndicatore) => {
+          const tr = document.createElement('tr');
+          
+          // Colonna indicatore
+          const tdIndicatore = document.createElement('td');
+          tdIndicatore.textContent = indicatore;
+          tr.appendChild(tdIndicatore);
+          
+          // Colonne livelli
+          livelli.forEach((livello, indiceLivello) => {
+            const td = document.createElement('td');
+            
+            // Pulsante
+            const button = document.createElement('button');
+            button.className = 'seleziona-btn';
+            button.setAttribute('data-livello', indiceLivello);
+            button.textContent = 'Seleziona';
+            button.addEventListener('click', () => selezionaLivello(indiceIndicatore, indiceLivello));
+            
+            // Descrittore
+            const descrittore = document.createElement('div');
+            descrittore.className = 'descrittore';
+            descrittore.textContent = livello.descrittori[indiceIndicatore];
+            
+            td.appendChild(button);
+            td.appendChild(descrittore);
+            
+            // Se già selezionato
+            if (valutazioniCompletate[studenteAttuale] && 
+                valutazioniCompletate[studenteAttuale][indiceIndicatore] === indiceLivello) {
+              button.classList.add('selected');
+              const nomeLivello = livelli[indiceLivello].nome;
+              // Normalizza il nome del livello per le classi CSS
+              const nomeLivelloCSS = normalizzaGiudizioCSS(nomeLivello);
+              td.classList.add('selezione-' + nomeLivelloCSS);
+            } else {
+              button.classList.add('not-selected');
+            }
+            
+            tr.appendChild(td);
+          });
+          
+          tbody.appendChild(tr);
+        });
+      }
+      
+      // Seleziona livello
+      function selezionaLivello(indiceIndicatore, indiceLivello) {
+        // Aggiorna array valutazioni
+        valutazioniCompletate[studenteAttuale][indiceIndicatore] = indiceLivello;
+        
+        // Aggiorna UI
+        const tabella = document.getElementById('tabella-valutazione');
+        const riga = tabella.rows[indiceIndicatore + 1]; // +1 per saltare intestazione
+        
+        // Rimuovi selezione precedente
+        for (let i = 1; i < riga.cells.length; i++) {
+          riga.cells[i].querySelector('.seleziona-btn').classList.remove('selected');
+          riga.cells[i].querySelector('.seleziona-btn').classList.add('not-selected');
+          riga.cells[i].className = ''; // Rimuovi classi selezione-*
+        }
+        
+        // Aggiungi nuova selezione
+        const td = riga.cells[indiceLivello + 1]; // +1 perché prima colonna è descrizione
+        td.querySelector('.seleziona-btn').classList.remove('not-selected');
+        td.querySelector('.seleziona-btn').classList.add('selected');
+        const nomeLivello = livelli[indiceLivello].nome;
+        // Normalizza il nome del livello per le classi CSS
+        const nomeLivelloCSS = normalizzaGiudizioCSS(nomeLivello);
+        td.classList.add('selezione-' + nomeLivelloCSS);
+        
+        // Aggiorna giudizio finale inline
+        aggiornaGiudizioFinale();
+      }
+      
+      // Aggiorna giudizio finale inline
+      function aggiornaGiudizioFinale() {
+        const valutazione = valutazioniCompletate[studenteAttuale];
+        const completo = !valutazione.includes(null);
+        const giudizio = calcolaGiudizioFinale(valutazione);
+        const span = document.getElementById("giudizio-finale-inline");
+        if (span) {
+          span.textContent = completo ? "Giudizio: " + giudizio : "Giudizio: -";
+          span.className = "badge";
+          if (completo) {
+            // Usa la versione normalizzata per le classi CSS
+            const giudizioClasseCSS = giudizio.toLowerCase().replace(' ', '');
+            span.classList.add("badge-" + giudizioClasseCSS);
+          }
+        }
+      }
+      
+      // Navigazione studenti
+      document.getElementById('prev-studente').addEventListener('click', function() {
+        // Salva note
+        noteStudenti[studenteAttuale] = document.getElementById('note-studente').value;
+        
+        // Vai allo studente precedente
+        if (studenteAttuale > 0) {
+          studenteAttuale--;
+          aggiornaVistaValutazione();
+        }
+      });
+      
+      document.getElementById('next-studente').addEventListener('click', function() {
+        // Salva note
+        noteStudenti[studenteAttuale] = document.getElementById('note-studente').value;
+        
+        // Controlla che tutti gli indicatori siano compilati
+        if (valutazioniCompletate[studenteAttuale].includes(null)) {
+          mostraNotifica('Non tutti gli indicatori sono stati compilati', 'error');
+          return;
+        }
+        
+        // Ultimo studente -> termina valutazione
+        if (studenteAttuale === studenti.length - 1) {
+          document.getElementById('valutazione-view').style.display = 'none';
+          document.getElementById('risultati-view').style.display = 'block';
+          aggiornaVistaRisultati();
+          mostraNotifica("Valutazione completata per tutti gli studenti!", "success");
+        } else {
+          // Vai allo studente successivo
+          studenteAttuale++;
+          aggiornaVistaValutazione();
+        }
+      });
+      
+      // Torna alla modifica dati
+      document.getElementById('torna-dati').addEventListener('click', function() {
+        document.getElementById('risultati-view').style.display = 'none';
+        document.getElementById('valutazione-view').style.display = 'block';
+        aggiornaVistaValutazione();
+      });
+      
+      // Termina/Chiudi Sessione
+      document.getElementById('chiudi-sessione').addEventListener('click', function() {
+        if (confirm('Sei sicuro di voler terminare la sessione? Tutti i dati non salvati andranno persi.')) {
+          location.reload();
+        }
+      });
+      
+      // Esporta CSV
+      document.getElementById('esporta-csv').addEventListener('click', function() {
+        // Prepara dati CSV
+        let csvContent = "N.,ALUNNO,VOTO COMPORTAMENTO,INDICATORI,NOTE\n";
+        
+        studenti.forEach((studente, index) => {
+          const giudizio = calcolaGiudizioFinale(valutazioniCompletate[index], index);
+          const indicatoriStr = formattaIndicatoriPerCSV(valutazioniCompletate[index]);
+          const note = noteStudenti[index] || '';
+          
+          csvContent += `${index + 1},"${studente.replace(/"/g, '""')}","${giudizio}","${indicatoriStr.replace(/"/g, '""')}","${note.replace(/"/g, '""')}"\n`;
+        });
+        
+        // Crea file e link download
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `valutazioni_comportamento_${datiClasse.classe}_${datiClasse.quadrimestre}.csv`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        
+        mostraNotifica("CSV esportato con successo!", "success");
+      });
+      
+      function formattaIndicatoriPerCSV(valutazioniStudente) {
+        let risultato = [];
+        valutazioniStudente.forEach((val, idx) => {
+          if (val !== null) {
+            risultato.push(`${indicatori[idx]}: ${livelli[val].nome}`);
+          }
+        });
+        return risultato.join("; ");
+      }
+      
+      // Esporta dati completi
+      document.getElementById('esporta-dati').addEventListener('click', function() {
+        // Crea oggetto dati completo
+        const datiCompleti = {
+          datiClasse: datiClasse,
+          studenti: studenti,
+          valutazioniCompletate: valutazioniCompletate,
+          noteStudenti: noteStudenti,
+          schoolInfo: schoolInfo,
+          giudiziPersonalizzati: giudiziPersonalizzati
+        };
+        
+        // Converti in JSON
+        const jsonStr = JSON.stringify(datiCompleti, null, 2);
+        
+        // Crea blob e link per download
+        const blob = new Blob([jsonStr], {type: 'application/json'});
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `valutazioni_comportamento_${datiClasse.classe}_${datiClasse.quadrimestre}.json`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        
+        mostraNotifica("Dati esportati con successo!", "success");
+      });
+      
+      // Stampa report
+      document.getElementById('stampa-report').addEventListener('click', function() {
+        window.print();
+      });
+      
+      // Funzione per calcolare il giudizio finale
+      
+
+
+function calcolaGiudizioFinale(valutazioneStudente, studenteIndex) {
+  // Se è stato impostato un giudizio personalizzato, restituiscilo
+  if (typeof studenteIndex !== 'undefined' && giudiziPersonalizzati[studenteIndex]) {
+    return giudiziPersonalizzati[studenteIndex];
+  }
+  // Conteggia quanti indicatori per livello (0=OTTIMO,...,5=NON SUFFICIENTE)
+  const conteggi = Array(6).fill(0);
+  const voti = [];
+  valutazioneStudente.forEach(v => {
+    if (v !== null) {
+      conteggi[v]++;
+      voti.push(v);
+    }
+  });
+  // Se nessun indicatore, non valutato
+  if (voti.length === 0) {
+    return "NON VALUTATO";
+  }
+  // Casi specifici da gestire prima delle regole obbligatorie
+  // 2 SUFFICIENTE (indice 4) + 3 NON SUFFICIENTE (indice 5) -> NON SUFFICIENTE
+  if (conteggi[4] === 2 && conteggi[5] === 3) {
+    return "NON SUFFICIENTE";
+  }
+  // 2 SUFFICIENTE (indice 4) + 3 DISCRETO (indice 3) -> SUFFICIENTE
+  if (conteggi[4] === 2 && conteggi[3] === 3) {
+    return "SUFFICIENTE";
+  }
+  // Regole obbligatorie
+  if (conteggi[0] === 5) return "OTTIMO";
+  if (conteggi[1] >= 4) return "DISTINTO";
+  if (conteggi[2] >= 4) return "BUONO";
+  if (conteggi[3] >= 3) return "DISCRETO";
+  if (conteggi[4] >= 2) return "SUFFICIENTE";
+  if (conteggi[5] >= 3) return "NON SUFFICIENTE";
+  // Fallback: media matematica con scala invertita (OTTIMO=5,...,NON SUFFICIENTE=0)
+  const etichette = ["NON SUFFICIENTE","SUFFICIENTE","DISCRETO","BUONO","DISTINTO","OTTIMO"];
+  const invertiti = voti.map(v => 5 - v);
+  const media = Math.floor(invertiti.reduce((a,b)=>a+b,0) / invertiti.length);
+  return etichette[media];
+}
+
+
+// Aggiorna vista risultati
+      function aggiornaVistaRisultati() {
+    document.getElementById('istituto-report').style.display = 'none';
+    const titoloGeneratore = document.querySelector('#app > h1');
+    if (titoloGeneratore) titoloGeneratore.style.display = 'none';
+
+    document.getElementById('istituto-report').style.display = 'none';
+
+        // Aggiorna i dati della classe
+        document.getElementById('quadrimestre-report').textContent = datiClasse.quadrimestre;
+        document.getElementById('classe-report').textContent = datiClasse.classe;
+        document.getElementById('plesso-report').textContent = datiClasse.plesso;
+        document.getElementById('data-scrutinio').textContent = formatDate(datiClasse.data);
+        // Imposta il nome dell'Istituto per la stampa
+        const istitutoPrint = document.getElementById('istituto-print');
+        if (istitutoPrint) istitutoPrint.textContent = schoolInfo.istituto || '';
+        document.getElementById('coordinatore-firma').textContent = datiClasse.coordinatore;
+        
+        // Aggiorna i dati dell'istituto
+        document.getElementById('istituto-report').textContent = schoolInfo.istituto || 'Istituto Comprensivo';
+        
+        // Aggiorna i dati di stampa
+        document.getElementById('print-istituto').textContent = schoolInfo.istituto || 'Istituto Comprensivo';
+        document.getElementById('print-plesso').textContent = datiClasse.plesso;
+        document.getElementById('print-classe').textContent = datiClasse.classe;
+        document.getElementById('print-sezione').textContent = datiClasse.sezione;
+        document.getElementById('print-quadrimestre').textContent = datiClasse.quadrimestre;
+        document.getElementById('print-anno').textContent = schoolInfo.annoScolastico || '';
+        
+        // Genera tabella risultati
+        const tbody = document.getElementById('tabella-risultati').querySelector('tbody');
+        tbody.innerHTML = '';
+        
+        studenti.forEach((studente, index) => {
+          const tr = document.createElement('tr');
+          
+          // Numero
+          const tdNum = document.createElement('td');
+          tdNum.textContent = index + 1;
+          tr.appendChild(tdNum);
+          
+          // Nome studente
+          const tdNome = document.createElement('td');
+          tdNome.textContent = studente;
+          tr.appendChild(tdNome);
+          
+          // Voto
+          const giudizio = calcolaGiudizioFinale(valutazioniCompletate[index], index);
+          const tdVoto = document.createElement('td');
+          tdVoto.textContent = giudizio;
+          // Normalizza il nome del giudizio per le classi CSS
+          const giudizioCSS = normalizzaGiudizioCSS(giudizio);
+          tdVoto.className = 'voto-' + giudizioCSS;
+          tr.appendChild(tdVoto);
+          
+          
+          // Aggiungi icona di override
+          const editIcon = document.createElement('span');
+          editIcon.innerHTML = '✏️';
+          editIcon.className = 'edit-giudizio no-print';
+          editIcon.style.cursor = 'pointer';
+          editIcon.style.marginLeft = '5px';
+          editIcon.title = 'Modifica manuale del giudizio';
+          editIcon.addEventListener('click', () => modificaGiudizio(index));
+          tdVoto.appendChild(editIcon);
+          // Indicatore di modifica
+          if (giudiziPersonalizzati[index]) {
+            const modificatoIndicator = document.createElement('span');
+            modificatoIndicator.textContent = ' (M)';
+            modificatoIndicator.title = 'Giudizio modificato manualmente';
+            modificatoIndicator.style.fontStyle = 'italic';
+            tdVoto.appendChild(modificatoIndicator);
+          }
+// Indicatori
+          const tdIndicatori = document.createElement('td');
+          valutazioniCompletate[index].forEach((livIdx, indIdx) => {
+            if (livIdx !== null) {
+              const span = document.createElement('span');
+              span.className = `badge ${livelli[livIdx].classe}`;
+              span.textContent = `${indicatori[indIdx].split(' ')[0]}: ${livelli[livIdx].nome}`;
+              tdIndicatori.appendChild(span);
+              if (indIdx < valutazioniCompletate[index].length - 1) {
+                tdIndicatori.appendChild(document.createElement('br'));
+              }
+            }
+          });
+          tr.appendChild(tdIndicatori);
+          
+          // Note
+          const tdNote = document.createElement('td');
+          tdNote.textContent = noteStudenti[index] || '';
+          tr.appendChild(tdNote);
+          
+          tbody.appendChild(tr);
+        });
+      }
+      
+      // Sistema di notifiche
+      function mostraNotifica(messaggio, tipo = "info") {
+        const notifica = document.getElementById("notification");
+        notifica.textContent = messaggio;
+        notifica.className = "notification";
+        notifica.classList.add(tipo);
+        notifica.classList.add("show");
+        
+        setTimeout(function() {
+          notifica.classList.remove("show");
+        }, 3000);
+      }
+      
+      // Formatta data da YYYY-MM-DD a DD/MM/YYYY
+      function formatDate(dateStr) {
+        if (!dateStr) return '';
+        const parts = dateStr.split('-');
+        if (parts.length !== 3) return dateStr;
+        return `${parts[2]}/${parts[1]}/${parts[0]}`;
+      }
+      
+      // Inizializza lista studenti
+      aggiornaListaStudenti();
+    
+      // Funzione per modifica manuale del giudizio
+      function modificaGiudizio(studenteIndex) {
+        const attuale = calcolaGiudizioFinale(valutazioniCompletate[studenteIndex], studenteIndex);
+        const opzioni = [
+              { value: '',               label: '🔄 Ripristina automatico' },
+              { value: 'OTTIMO',         label: 'OTTIMO' },
+              { value: 'DISTINTO',       label: 'DISTINTO' },
+              { value: 'BUONO',          label: 'BUONO' },
+              { value: 'DISCRETO',       label: 'DISCRETO' },
+              { value: 'SUFFICIENTE',    label: 'SUFFICIENTE' },
+              { value: 'NON SUFFICIENTE',label: 'NON SUFFICIENTE' }
+            ];
+
+        const modal = document.createElement('div');
+        modal.className = 'modal-overlay';
+        modal.style.display = 'flex';
+        modal.innerHTML = `
+          <div class="modal-content">
+            <button class="close-modal">&times;</button>
+            <h2>Modifica Giudizio</h2>
+            <p><strong>${studenti[studenteIndex]}</strong>: da <em>${attuale}</em></p>
+            <div class="form-group">
+              <select id="override-select"></select>
+            </div>
+            <div style="text-align:right; margin-top:1rem;">
+              <button id="annulla" class="btn-gray">Annulla</button>
+              <button id="conferma" class="btn-green">Conferma</button>
+            </div>
+          </div>`;
+        document.body.appendChild(modal);
+
+        const select = modal.querySelector('#override-select');
+        opzioni.forEach(o => {
+              const opt = document.createElement('option');
+              opt.value = o.value;
+              opt.text = o.label;
+              if (o.value === attuale) opt.selected = true;
+              select.appendChild(opt);
+            });
+
+        modal.querySelector('.close-modal').onclick =
+        modal.querySelector('#annulla').onclick = () => modal.remove();
+
+        modal.querySelector('#conferma').onclick = () => {
+              const scelta = select.value;
+              if (scelta === '') {
+                delete giudiziPersonalizzati[studenteIndex];
+              } else {
+                giudiziPersonalizzati[studenteIndex] = scelta;
+              }
+              modal.remove();
+              aggiornaVistaRisultati();
+              mostraNotifica(
+                scelta === ''
+                  ? `Giudizio di ${studenti[studenteIndex]} ripristinato al calcolo automatico`
+                  : `Giudizio di ${studenti[studenteIndex]} aggiornato a ${scelta}`,
+                'success'
+              );
+            };
+      }
+});
+  </script>
+  
+  <script>
+    function vaiHome() {
+      updateFabVisibility();
+    document.getElementById('inserimento-view').style.display = 'block';
+      document.getElementById('valutazione-view').style.display = 'none';
+      document.getElementById('risultati-view').style.display = 'none';
+      // Ripristina valori inseriti dalla home
+      document.getElementById('quadrimestre').value = datiClasse.quadrimestre;
+      document.getElementById('classe').value       = datiClasse.classe;
+      document.getElementById('sezione').value      = datiClasse.sezione;
+      document.getElementById('plesso').value       = datiClasse.plesso;
+      document.getElementById('coordinatore').value = datiClasse.coordinatore;
+      document.getElementById('data').value         = datiClasse.data;
+    }
+  </script>
+
+  <!-- Floating Action Button per iniziare la valutazione -->
+  <div class="fab-start" id="fab-start">Inizia Valutazione</div>
+
+  <!-- Modal di conferma inizio valutazione -->
+  <div id="start-confirm-modal" class="modal-overlay">
+    <div class="modal-content">
+    <button type="button" class="close-modal" aria-label="Chiudi modal">&times;</button>
+      <div class="modal-header">
+      <h2>Inizia Valutazione</h2>
+      <p>Hai importato <span id="count-students-confirm"></span> studenti.<br>Vuoi iniziare la valutazione ora?</p>
+      <div class="form-group" style="margin-top:10px; text-align:left;">
+        <label for="scrutinio-date-modal">Data Scrutinio:</label>
+        <input type="date" id="scrutinio-date-modal" style="width:100%; padding:8px; border:1px solid var(--gray); border-radius:4px;" />
+      </div>
+        <h2>Inizia Valutazione</h2>
+        <p>Hai importato <span id="count-students-confirm"></span>.<br>Vuoi iniziare la valutazione ora?</p>
+      </div>
+      <div class="modal-footer">
+        <button id="no-start" class="btn-gray">❌ No, torno ai dati</button>
+        <button id="yes-start" class="btn-green">✅ Sì, inizia ora</button>
+      </div>
+    </div>
+  </div>
+
+
+<script>
+  // Assicura che il FAB invii il click al pulsante "Inizia Valutazione"
+  document.addEventListener('DOMContentLoaded', function() {
+    const fab = document.getElementById('fab-start');
+    const startBtn = document.getElementById('inizia-valutazione');
+    if (fab && startBtn) {
+      fab.addEventListener('click', function() {
+        startBtn.click();
+      });
+    }
+  });
+</script>
+
+
+<script>
+  // Funzione per mostrare/nascondere il FAB sulla home page (inserimento)
+  function updateFabVisibility() {
+    var fab = document.getElementById('fab-start');
+    var homeView = document.getElementById('inserimento-view');
+    if (fab && homeView) {
+      var display = window.getComputedStyle(homeView).display;
+      fab.style.display = (display !== 'none') ? 'flex' : 'none';
+    }
+  }
+  document.addEventListener('DOMContentLoaded', function() {
+    updateFabVisibility();
+    // Nascondi anche se si clicca su Inizia Valutazione
+    var startBtn = document.getElementById('inizia-valutazione');
+    if (startBtn) {
+      startBtn.addEventListener('click', updateFabVisibility);
+    }
+    // Anche dopo conferma 'Sì, inizia ora'
+    var yesStart = document.getElementById('yes-start');
+    if (yesStart) {
+      yesStart.addEventListener('click', updateFabVisibility);
+    }
+  });
+</script>
+
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Show/hide FAB based on view
+    updateFabVisibility();
+
+    // Toggle on start evaluation
+    var startBtn = document.getElementById('inizia-valutazione');
+    if (startBtn) startBtn.addEventListener('click', updateFabVisibility);
+
+    // Toggle on confirm import modal 'Sì, inizia ora'
+    var yesStart = document.getElementById('yes-start');
+    if (yesStart) yesStart.addEventListener('click', updateFabVisibility);
+
+    // Toggle on 'Torna alla Home' links/buttons
+    var backHomeBtns = document.querySelectorAll('button[onclick="vaiHome()"]');
+    backHomeBtns.forEach(function(btn) {
+      btn.addEventListener('click', updateFabVisibility);
+    });
+
+    // Toggle on 'Torna ai dati' in results
+    var backToData = document.getElementById('torna-dati');
+    if (backToData) backToData.addEventListener('click', updateFabVisibility);
+
+    // Toggle on 'Termina/Chiudi Sessione'
+    var closeSession = document.getElementById('chiudi-sessione');
+    if (closeSession) closeSession.addEventListener('click', updateFabVisibility);
+});
+</script>
+
+
+  <!-- Override mostraNotifica per supportare più notifiche -->
+  <script>
+    function mostraNotifica(msg, type) {
+      const notif = document.createElement('div');
+      notif.className = `notification ${type} show`;
+      notif.textContent = msg;
+      document.body.appendChild(notif);
+      setTimeout(() => {
+        notif.classList.remove('show');
+        setTimeout(() => document.body.removeChild(notif), 300);
+      }, 3000);
+    }
+  </script>
+
+<script>
+// JS to close modals via the close button
+document.addEventListener('DOMContentLoaded', function() {
+  document.querySelectorAll('.close-modal').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      var overlay = btn.closest('.modal-overlay');
+      if (overlay) overlay.style.display = 'none';
+    });
+  });
+});
+</script>
+
+
+<script>
+// Chiude i modal anche cliccando sull'overlay
+document.addEventListener('DOMContentLoaded', function() {
+  document.querySelectorAll('.modal-overlay').forEach(function(overlay) {
+    overlay.addEventListener('click', function(e) {
+      if (e.target === overlay) overlay.style.display = 'none';
+    });
+  });
+});
+</script>
+
+</body>
+</html>
