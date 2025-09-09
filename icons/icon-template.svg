@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="512" height="512" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background rounded rectangle -->
+  <rect x="0" y="0" width="512" height="512" rx="92" ry="92" fill="#1e88e5"/>
+  
+  <!-- Safe area for maskable icon (20% margin) -->
+  <g transform="translate(102, 102) scale(0.6)">
+    <!-- Document/form icon (main element) -->
+    <rect x="120" y="80" width="272" height="352" rx="20" ry="20" fill="white" stroke="none"/>
+    
+    <!-- Document header line -->
+    <rect x="150" y="120" width="212" height="8" rx="4" ry="4" fill="#e0e0e0"/>
+    
+    <!-- Evaluation checkboxes/fields -->
+    <rect x="150" y="160" width="20" height="20" rx="3" ry="3" fill="none" stroke="#e0e0e0" stroke-width="2"/>
+    <rect x="180" y="164" width="120" height="4" rx="2" ry="2" fill="#e0e0e0"/>
+    
+    <rect x="150" y="200" width="20" height="20" rx="3" ry="3" fill="none" stroke="#e0e0e0" stroke-width="2"/>
+    <rect x="180" y="204" width="140" height="4" rx="2" ry="2" fill="#e0e0e0"/>
+    
+    <rect x="150" y="240" width="20" height="20" rx="3" ry="3" fill="none" stroke="#e0e0e0" stroke-width="2"/>
+    <rect x="180" y="244" width="100" height="4" rx="2" ry="2" fill="#e0e0e0"/>
+    
+    <!-- Stars for rating (green and orange) -->
+    <g transform="translate(320, 160)">
+      <polygon points="12,2 15,9 23,9 17,14 19,22 12,17 5,22 7,14 1,9 9,9" fill="#4caf50"/>
+    </g>
+    <g transform="translate(320, 200)">
+      <polygon points="12,2 15,9 23,9 17,14 19,22 12,17 5,22 7,14 1,9 9,9" fill="#ffb300"/>
+    </g>
+    <g transform="translate(320, 240)">
+      <polygon points="12,2 15,9 23,9 17,14 19,22 12,17 5,22 7,14 1,9 9,9" fill="#4caf50"/>
+    </g>
+    
+    <!-- Stylized student figure -->
+    <g transform="translate(200, 300)">
+      <!-- Head -->
+      <circle cx="56" cy="30" r="25" fill="#616161"/>
+      <!-- Body -->
+      <rect x="40" y="55" width="32" height="45" rx="16" ry="16" fill="#616161"/>
+      <!-- Arms -->
+      <rect x="25" y="65" width="12" height="30" rx="6" ry="6" fill="#616161"/>
+      <rect x="75" y="65" width="12" height="30" rx="6" ry="6" fill="#616161"/>
+      <!-- Legs -->
+      <rect x="45" y="100" width="10" height="25" rx="5" ry="5" fill="#616161"/>
+      <rect x="57" y="100" width="10" height="25" rx="5" ry="5" fill="#616161"/>
+    </g>
+  </g>
+  
+  <!-- Additional decorative elements -->
+  <!-- Small academic cap icon in corner -->
+  <g transform="translate(380, 50) scale(0.8)">
+    <polygon points="20,30 50,20 80,30 50,35" fill="white" opacity="0.3"/>
+    <rect x="75" y="25" width="3" height="15" fill="white" opacity="0.3"/>
+    <circle cx="78" r="3" fill="white" opacity="0.3"/>
+  </g>
+</svg>
