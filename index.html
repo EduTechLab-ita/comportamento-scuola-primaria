@@ -1784,7 +1784,8 @@ td[class^="selezione-"] {
       // Persist changes in home inputs to datiClasse
       ['quadrimestre','classe','sezione','plesso','coordinatore','data'].forEach(id => {
         const el = document.getElementById(id);
-        if (el) el.addEventListener('change', e => { datiClasse[id] = e.target.value; 
+        if (el) el.addEventListener('change', e => { datiClasse[id] = e.target.value; });
+      });
 
     // Crea FAB Chiudi (verde, sopra) e FAB Backup (ambra, sotto)
     const closeFab = document.createElement('button');
@@ -1831,7 +1832,6 @@ td[class^="selezione-"] {
     });
 
 });
-      });
 
 // Definizione degli indicatori e dei livelli
       const indicatori = [
