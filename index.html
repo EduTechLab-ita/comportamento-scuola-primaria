@@ -1797,7 +1797,7 @@ td[class^="selezione-"] {
     saveFab.textContent = '💾 Backup';
     document.body.appendChild(saveFab);
     closeFab.addEventListener('click', () => {
-      const driveConn = window.driveState && window.driveState.enabled && window.driveState.accessToken && Date.now() < window.driveState.tokenExpiry;
+      const driveConn = window._isDriveConnected && window._isDriveConnected();
       if (driveConn) {
         alert('✅ Tutti i dati sono già salvati automaticamente su Google Drive.\n\nPuoi chiudere l\'app in sicurezza.');
       } else {
@@ -1808,9 +1808,9 @@ td[class^="selezione-"] {
 
     // Handler per esportare dati in JSON, anche se vuoti
     saveFab.addEventListener('click', () => {
-      const driveConnesso = window.driveState && window.driveState.enabled && window.driveState.accessToken && Date.now() < window.driveState.tokenExpiry;
+      const driveConnesso = window._isDriveConnected && window._isDriveConnected();
       if (driveConnesso) {
-        const scelta = confirm('✅ I dati vengono già salvati automaticamente su Google Drive.\n\nVuoi scaricare anche un backup JSON sul tuo PC?');
+        const scelta = confirm('✅ I dati sono al sicuro su Google Drive.\n\nVuoi scaricare anche un backup JSON sul tuo PC?');
         if (!scelta) return;
       }
       const exportData = {
@@ -2992,33 +2992,45 @@ document.getElementById('nome-studente-attuale').textContent = studenti[studente
         document.body.appendChild(tip);
         const span = document.getElementById('giudizio-finale-inline');
         if (!span) return;
-        span.addEventListener('mouseenter', (e) => {
-          if (!span._tipHtml) return;
-          tip.innerHTML = span._tipHtml;
-          tip.classList.add('show');
-          // Posiziona sopra il badge
+        function posizionaTip() {
           const r = span.getBoundingClientRect();
           const tw = 270;
           let left = r.left + r.width / 2 - tw / 2;
           if (left < 8) left = 8;
           if (left + tw > window.innerWidth - 8) left = window.innerWidth - tw - 8;
           tip.style.left = left + 'px';
-          tip.style.top  = (r.top - 10) + 'px';
-          tip.style.transform = 'translateY(-100%)';
+          // Se il badge è nella metà superiore, mostra sotto; altrimenti sopra
+          if (r.top < window.innerHeight / 2) {
+            tip.style.top = (r.bottom + 8) + 'px';
+            tip.style.transform = 'none';
+          } else {
+            tip.style.top = (r.top - 10) + 'px';
+            tip.style.transform = 'translateY(-100%)';
+          }
+        }
+        span.addEventListener('mouseenter', () => {
+          if (!span._tipHtml) return;
+          tip.innerHTML = span._tipHtml;
+          posizionaTip();
+          tip.classList.add('show');
         });
         span.addEventListener('mouseleave', () => tip.classList.remove('show'));
+        // Riposiziona al scroll (o nasconde se badge fuori viewport)
+        window.addEventListener('scroll', () => {
+          if (!tip.classList.contains('show')) return;
+          const r = span.getBoundingClientRect();
+          if (r.bottom < 0 || r.top > window.innerHeight) {
+            tip.classList.remove('show');
+          } else {
+            posizionaTip();
+          }
+        }, { passive: true });
         // Supporto touch
         span.addEventListener('touchstart', (e) => {
           if (!span._tipHtml) return;
           e.preventDefault();
           tip.innerHTML = span._tipHtml;
-          const r = span.getBoundingClientRect();
-          const tw = 270;
-          let left = r.left + r.width / 2 - tw / 2;
-          if (left < 8) left = 8;
-          tip.style.left = left + 'px';
-          tip.style.top  = (r.top - 10) + 'px';
-          tip.style.transform = 'translateY(-100%)';
+          posizionaTip();
           tip.classList.add('show');
           setTimeout(() => tip.classList.remove('show'), 4000);
         });
@@ -3717,6 +3729,7 @@ let driveState = {
   annoCartella: null,
   userEmail:    ''
 };
+window._isDriveConnected = () => driveState.enabled && driveState.accessToken && Date.now() < driveState.tokenExpiry;
 
 function loadDriveConfig() {
   try {
