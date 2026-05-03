@@ -607,7 +607,7 @@ td[class^="selezione-"] {
 /* Drive save toast */
 .drive-toast {
   position: fixed; bottom: 80px; right: 20px;
-  background: #1e293b; color: #fff; border-radius: 10px;
+  background: #166534; color: #fff; border-radius: 10px;
   padding: 10px 16px; display: flex; align-items: center; gap: 10px;
   font-size: 0.85rem; opacity: 0; pointer-events: none;
   transform: translateY(8px); transition: all 0.3s; z-index: 9999;
@@ -1105,30 +1105,25 @@ td[class^="selezione-"] {
   </style>
 
 <style>
-  /* FAB Salva e Scarica */
+  /* FAB Salva e Chiudi */
+  .fab-group {
+    position: fixed; bottom: 80px; left: 20px;
+    display: flex; flex-direction: column; gap: 8px; z-index: 1001;
+  }
   .fab-save {
-    position: fixed;
-    bottom: 80px;
-    left: 20px;
-    background: #f59e0b;
-    color: white;
-    border-radius: 24px;
-    padding: 12px 16px;
-    font-size: 1rem;
-    font-weight: 600;
-    box-shadow: 0 4px 8px rgba(0,0,0,0.2);
-    cursor: pointer;
-    z-index: 1001;
-    transition: transform 0.2s;
+    background: #f59e0b; color: white; border-radius: 24px;
+    padding: 12px 16px; font-size: 1rem; font-weight: 600;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.2); cursor: pointer;
+    transition: transform 0.2s; border: none;
   }
-  .fab-save:hover {
-    transform: scale(1.05);
+  .fab-close {
+    background: #166534; color: white; border-radius: 24px;
+    padding: 12px 16px; font-size: 1rem; font-weight: 600;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.2); cursor: pointer;
+    transition: transform 0.2s; border: none;
   }
-  @media print {
-    .fab-save {
-      display: none !important;
-    }
-  }
+  .fab-save:hover, .fab-close:hover { transform: scale(1.05); }
+  @media print { .fab-group { display: none !important; } }
 </style>
 
 <style>
@@ -1773,30 +1768,51 @@ td[class^="selezione-"] {
         const el = document.getElementById(id);
         if (el) el.addEventListener('change', e => { datiClasse[id] = e.target.value; 
 
-    // Crea pulsante Salva e Scarica in basso a sinistra
+    // Crea gruppo FAB (Salva backup + Chiudi) in basso a sinistra
+    const fabGroup = document.createElement('div');
+    fabGroup.className = 'fab-group';
     const saveFab = document.createElement('button');
     saveFab.className = 'fab-save';
-    saveFab.textContent = '💾 Salva';
-    document.body.appendChild(saveFab);
+    saveFab.textContent = '💾 Backup';
+    const closeFab = document.createElement('button');
+    closeFab.className = 'fab-close';
+    closeFab.textContent = '✅ Chiudi';
+    closeFab.addEventListener('click', () => {
+      const driveConn = window.driveState && window.driveState.enabled && window.driveState.accessToken && Date.now() < window.driveState.tokenExpiry;
+      if (driveConn) {
+        alert('✅ Tutti i dati sono già salvati automaticamente su Google Drive.\n\nPuoi chiudere l\'app in sicurezza.');
+      } else {
+        const scarica = confirm('⚠️ Drive non connesso. I dati NON sono salvati sul cloud.\n\nVuoi scaricare un backup JSON prima di chiudere?');
+        if (scarica) saveFab.click();
+      }
+    });
+    fabGroup.appendChild(closeFab);
+    fabGroup.appendChild(saveFab);
+    document.body.appendChild(fabGroup);
 
     // Handler per esportare dati in JSON, anche se vuoti
     saveFab.addEventListener('click', () => {
+      const driveConnesso = window.driveState && window.driveState.enabled && window.driveState.accessToken && Date.now() < window.driveState.tokenExpiry;
+      if (driveConnesso) {
+        const scelta = confirm('✅ I dati vengono già salvati automaticamente su Google Drive.\n\nVuoi scaricare anche un backup JSON sul tuo PC?');
+        if (!scelta) return;
+      }
       const exportData = {
         datiClasse: datiClasse || {},
         schoolInfo: schoolInfo || {},
         studenti: Array.isArray(studenti) ? studenti : [],
         valutazioniCompletate: Array.isArray(valutazioniCompletate) ? valutazioniCompletate : [],
         noteStudenti: Array.isArray(noteStudenti) ? noteStudenti : [],
-        giudiziPersonalizzati: giudiziPersonalizzati,
-};
+        giudiziPersonalizzati: giudiziPersonalizzati
+      };
       const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
       const url = URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
-      link.download = 'valutazione-dati.json';
+      link.download = 'comportamento-backup.json';
       link.click();
       URL.revokeObjectURL(url);
-      mostraNotifica('Dati salvati in valutazione-dati.json', 'success');
+      mostraNotifica('Backup scaricato: comportamento-backup.json', 'success');
     });
 
 });
@@ -1915,11 +1931,34 @@ td[class^="selezione-"] {
         if (data.valutazioniCompletate) valutazioniCompletate = JSON.parse(JSON.stringify(data.valutazioniCompletate));
         if (data.noteStudenti) noteStudenti = [...data.noteStudenti];
         if (data.giudiziPersonalizzati) giudiziPersonalizzati = Array.isArray(data.giudiziPersonalizzati) ? [...data.giudiziPersonalizzati] : data.giudiziPersonalizzati;
-        if (data.datiClasse) datiClasse = JSON.parse(JSON.stringify(data.datiClasse));
-        if (data.schoolInfo) { schoolInfo = JSON.parse(JSON.stringify(data.schoolInfo)); localStorage.setItem('schoolInfo', JSON.stringify(schoolInfo)); }
+        if (data.datiClasse) {
+          datiClasse = JSON.parse(JSON.stringify(data.datiClasse));
+          // Ripopola i campi form della vista inserimento
+          ['quadrimestre','classe','sezione','plesso','coordinatore','data'].forEach(id => {
+            const el = document.getElementById(id);
+            if (el && datiClasse[id] !== undefined) el.value = datiClasse[id];
+          });
+        }
+        if (data.schoolInfo) {
+          schoolInfo = JSON.parse(JSON.stringify(data.schoolInfo));
+          localStorage.setItem('schoolInfo', JSON.stringify(schoolInfo));
+          // Aggiorna visualizzazione dati scuola
+          if (typeof updateSchoolInfoDisplay === 'function') updateSchoolInfoDisplay();
+        }
         if (typeof aggiornaListaStudenti === 'function') aggiornaListaStudenti();
         const hdr = document.getElementById('header-school');
         if (hdr) hdr.textContent = (schoolInfo && schoolInfo.istituto) ? schoolInfo.istituto : 'Informazioni scuola (clicca per modificare)';
+      };
+      window._resetAppData = () => {
+        studenti = []; valutazioniCompletate = []; noteStudenti = []; giudiziPersonalizzati = [];
+        datiClasse = { annoScolastico:'', quadrimestre:'', classe:'', plesso:'', data: new Date().toISOString().split('T')[0], coordinatore:'', sezione:'' };
+        schoolInfo = { istituto:'', plesso:'', annoScolastico:'' };
+        localStorage.removeItem('schoolInfo');
+        ['quadrimestre','classe','sezione','plesso','coordinatore','data'].forEach(id => {
+          const el = document.getElementById(id); if (el) el.value = '';
+        });
+        if (typeof updateSchoolInfoDisplay === 'function') updateSchoolInfoDisplay();
+        if (typeof aggiornaListaStudenti === 'function') aggiornaListaStudenti();
       };
 
       // Funzione per normalizzare il valore di giudizio per le classi CSS
@@ -3494,6 +3533,9 @@ document.addEventListener('DOMContentLoaded', function() {
         📂 Carica anno precedente…
       </button>
       <div id="drive-anni-list" style="display:none; margin-top:10px;"></div>
+      <button type="button" onclick="fineAnnoScolastico()" style="width:100%; margin-top:10px; background:#dc2626; color:#fff; border:none; border-radius:8px; padding:10px 16px; cursor:pointer; font-size:0.9rem;">
+        🏁 Fine Anno Scolastico…
+      </button>
       <p style="margin-top:12px; font-size:0.8rem; color:#64748b; background:#fef9c3; padding:10px 12px; border-radius:8px;">
         💡 <strong>PC condiviso?</strong> Clicca <strong>Disconnetti</strong> al termine: rimuove i tuoi dati dal browser e li lascia al sicuro solo sul tuo Drive.
       </p>
@@ -3788,10 +3830,36 @@ function disconnectDrive() {
   if (driveState.accessToken && typeof google !== 'undefined' && google.accounts) {
     google.accounts.oauth2.revoke(driveState.accessToken);
   }
-  driveState = { enabled: false, accessToken: null, tokenExpiry: 0, fileId: null, folderId: null, yearFolderId: null, userEmail: '' };
+  driveState = { enabled: false, accessToken: null, tokenExpiry: 0, fileId: null, folderId: null, yearFolderId: null, annoCartella: null, userEmail: '' };
   saveDriveStateLocal();
   updateDriveButton();
   document.getElementById('drive-modal').style.display = 'none';
+}
+
+async function fineAnnoScolastico() {
+  const si = window._getAppData ? window._getAppData().schoolInfo : {};
+  const anno = normalizzaAnnoScolastico(si && si.annoScolastico) || '—';
+  const msg = `🏁 FINE ANNO SCOLASTICO ${anno}\n\n` +
+    `I dati di quest'anno sono già archiviati su Drive nella cartella "${anno}".\n\n` +
+    `Questa operazione:\n` +
+    `• Cancella studenti e valutazioni dal browser\n` +
+    `• Resetta tutti i campi per il nuovo anno\n` +
+    `• I dati su Drive rimangono al sicuro\n\n` +
+    `Confermi di voler iniziare il nuovo anno scolastico?`;
+  if (!confirm(msg)) return;
+  // Salva prima una copia finale su Drive
+  await saveToDrive();
+  // Resetta stato locale
+  if (window._resetAppData) window._resetAppData();
+  // Resetta Drive state per nuovo anno (fileId e yearFolder)
+  driveState.fileId       = null;
+  driveState.yearFolderId = null;
+  driveState.annoCartella = null;
+  saveDriveStateLocal();
+  document.getElementById('drive-modal').style.display = 'none';
+  // Aggiorna label anno nel pulsante
+  updateDriveButton();
+  mostraNotifica('Anno ' + anno + ' archiviato. Puoi iniziare il nuovo anno!', 'success');
 }
 
 function showDriveToast() {
