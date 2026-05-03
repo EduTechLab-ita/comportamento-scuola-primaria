@@ -1,0 +1,36 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <!-- Background -->
+  <rect width="512" height="512" rx="96" fill="#1565c0"/>
+
+  <!-- Clipboard body -->
+  <rect x="120" y="140" width="272" height="300" rx="22" fill="white"/>
+
+  <!-- Clipboard top clip -->
+  <rect x="196" y="120" width="120" height="44" rx="14" fill="#0d47a1"/>
+  <rect x="196" y="134" width="120" height="22" rx="0" fill="white"/>
+  <rect x="218" y="120" width="76" height="44" rx="8" fill="#0d47a1"/>
+
+  <!-- Indicatori row labels (5 righe di linee) -->
+  <rect x="150" y="215" width="108" height="9" rx="4" fill="#bbdefb"/>
+  <rect x="150" y="258" width="108" height="9" rx="4" fill="#bbdefb"/>
+  <rect x="150" y="301" width="108" height="9" rx="4" fill="#bbdefb"/>
+  <rect x="150" y="344" width="108" height="9" rx="4" fill="#bbdefb"/>
+  <rect x="150" y="387" width="108" height="9" rx="4" fill="#bbdefb"/>
+
+  <!-- Livelli dot (colore per livello assegnato) -->
+  <!-- OTTIMO = verde -->
+  <circle cx="310" cy="219" r="18" fill="#43a047"/>
+  <!-- OTTIMO = verde -->
+  <circle cx="310" cy="262" r="18" fill="#43a047"/>
+  <!-- DISTINTO = azzurro -->
+  <circle cx="310" cy="305" r="18" fill="#29b6f6"/>
+  <!-- BUONO = giallo-ambra -->
+  <circle cx="310" cy="348" r="18" fill="#fdd835"/>
+  <!-- DISTINTO = azzurro -->
+  <circle cx="310" cy="391" r="18" fill="#43a047"/>
+
+  <!-- Checkmark verde in basso a destra (scrutinio completato) -->
+  <circle cx="370" cy="400" r="40" fill="#43a047"/>
+  <polyline points="353,400 364,412 389,387" stroke="white" stroke-width="8"
+            fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

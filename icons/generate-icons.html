@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<title>Genera Icone PWA — Comportamento Scuola</title>
+<style>
+  body { font-family: sans-serif; padding: 20px; background: #f8fafc; }
+  h1 { color: #1565c0; }
+  .grid { display: flex; flex-wrap: wrap; gap: 16px; margin: 20px 0; }
+  .icon-item { text-align: center; }
+  .icon-item canvas { display: block; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,.15); }
+  .icon-item p { font-size: 12px; color: #64748b; margin: 4px 0; }
+  button { background: #1565c0; color: white; border: none; padding: 12px 24px;
+           border-radius: 8px; font-size: 1rem; cursor: pointer; margin: 4px; }
+  button:hover { background: #0d47a1; }
+  #status { margin-top: 16px; color: #166534; font-weight: 600; }
+</style>
+</head>
+<body>
+<h1>🎨 Generatore Icone — Comportamento Scuola</h1>
+<p>Clicca <strong>Genera tutte</strong> per creare i PNG, poi <strong>Scarica tutte</strong> per salvarle.</p>
+<button onclick="generateAll()">🖼 Genera tutte</button>
+<button onclick="downloadAll()">⬇️ Scarica tutte</button>
+<div id="status"></div>
+<div class="grid" id="grid"></div>
+
+<script>
+const SIZES = [72, 96, 128, 144, 152, 192, 384, 512];
+const canvases = {};
+
+function drawIcon(ctx, size) {
+  const s = size;
+  const r = s * 0.188; // border-radius ~96/512
+
+  // Background rounded rect
+  ctx.beginPath();
+  ctx.moveTo(r, 0);
+  ctx.lineTo(s - r, 0);
+  ctx.arcTo(s, 0, s, r, r);
+  ctx.lineTo(s, s - r);
+  ctx.arcTo(s, s, s - r, s, r);
+  ctx.lineTo(r, s);
+  ctx.arcTo(0, s, 0, s - r, r);
+  ctx.lineTo(0, r);
+  ctx.arcTo(0, 0, r, 0, r);
+  ctx.closePath();
+  ctx.fillStyle = '#1565c0';
+  ctx.fill();
+
+  const sc = s / 512;
+
+  // Clipboard body
+  roundRect(ctx, 120*sc, 140*sc, 272*sc, 300*sc, 22*sc, 'white');
+
+  // Clipboard top dark
+  roundRect(ctx, 196*sc, 120*sc, 120*sc, 44*sc, 14*sc, '#0d47a1');
+  // Clipboard top white fill (slot)
+  ctx.fillStyle = 'white';
+  ctx.fillRect(218*sc, 122*sc, 76*sc, 30*sc);
+  roundRect(ctx, 218*sc, 120*sc, 76*sc, 20*sc, 8*sc, '#0d47a1');
+
+  // Row lines
+  const rows = [215, 258, 301, 344, 387];
+  ctx.fillStyle = '#bbdefb';
+  rows.forEach(y => {
+    roundRect(ctx, 150*sc, y*sc, 108*sc, 9*sc, 4*sc, '#bbdefb');
+  });
+
+  // Evaluation dots
+  const dotColors = ['#43a047', '#43a047', '#29b6f6', '#fdd835', '#43a047'];
+  const dotY = [219, 262, 305, 348, 391];
+  dotY.forEach((y, i) => {
+    ctx.beginPath();
+    ctx.arc(310*sc, y*sc, 18*sc, 0, Math.PI * 2);
+    ctx.fillStyle = dotColors[i];
+    ctx.fill();
+  });
+
+  // Green checkmark badge (bottom right)
+  ctx.beginPath();
+  ctx.arc(370*sc, 400*sc, 40*sc, 0, Math.PI * 2);
+  ctx.fillStyle = '#43a047';
+  ctx.fill();
+
+  // Checkmark
+  ctx.beginPath();
+  ctx.moveTo(353*sc, 400*sc);
+  ctx.lineTo(364*sc, 412*sc);
+  ctx.lineTo(389*sc, 387*sc);
+  ctx.strokeStyle = 'white';
+  ctx.lineWidth = 8*sc;
+  ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
+  ctx.stroke();
+}
+
+function roundRect(ctx, x, y, w, h, r, color) {
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.lineTo(x + w - r, y);
+  ctx.arcTo(x + w, y, x + w, y + r, r);
+  ctx.lineTo(x + w, y + h - r);
+  ctx.arcTo(x + w, y + h, x + w - r, y + h, r);
+  ctx.lineTo(x + r, y + h);
+  ctx.arcTo(x, y + h, x, y + h - r, r);
+  ctx.lineTo(x, y + r);
+  ctx.arcTo(x, y, x + r, y, r);
+  ctx.closePath();
+  ctx.fillStyle = color;
+  ctx.fill();
+}
+
+function generateAll() {
+  const grid = document.getElementById('grid');
+  grid.innerHTML = '';
+  SIZES.forEach(size => {
+    const canvas = document.createElement('canvas');
+    canvas.width = size;
+    canvas.height = size;
+    const ctx = canvas.getContext('2d');
+    drawIcon(ctx, size);
+    canvases[size] = canvas;
+
+    const item = document.createElement('div');
+    item.className = 'icon-item';
+    item.appendChild(canvas);
+    item.innerHTML += `<p>${size}×${size}</p>`;
+    grid.appendChild(item);
+  });
+  document.getElementById('status').textContent = '✅ Icone generate! Ora clicca "Scarica tutte".';
+}
+
+function downloadAll() {
+  if (!Object.keys(canvases).length) { generateAll(); }
+  let delay = 0;
+  SIZES.forEach(size => {
+    setTimeout(() => {
+      const canvas = canvases[size];
+      const link = document.createElement('a');
+      link.download = `icon-${size}x${size}.png`;
+      link.href = canvas.toDataURL('image/png');
+      link.click();
+    }, delay);
+    delay += 200;
+  });
+}
+</script>
+</body>
+</html>

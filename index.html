@@ -27,7 +27,10 @@
   
   <!-- PWA Manifest -->
   <link rel="manifest" href="manifest.json">
-  
+
+  <!-- Google Identity Services (per OAuth2 Drive) -->
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
+
 <style>
 /* Aesthetic refinements */
 /* Uniform button colors by role */
@@ -559,6 +562,57 @@ td[class^="selezione-"] {
 .notification.info {
   background-color: var(--primary);
 }
+
+/* ── Pulsante Drive ── */
+.drive-button {
+  display: inline-flex; align-items: center; gap: 7px;
+  background: #fff; border: 1.5px solid #e2e8f0; border-radius: 20px;
+  padding: 7px 15px; cursor: pointer; font-size: 0.85rem; font-weight: 500;
+  color: #334155; transition: all 0.2s; box-shadow: 0 1px 3px rgba(0,0,0,.08);
+  margin: 4px !important;
+}
+.drive-button:hover { border-color: #94a3b8; box-shadow: 0 2px 6px rgba(0,0,0,.15); }
+.drive-dot {
+  width: 8px; height: 8px; border-radius: 50%; background: #94a3b8; flex-shrink: 0;
+  transition: background 0.3s;
+}
+.drive-button.connected .drive-dot { background: #4ade80; box-shadow: 0 0 5px #4ade80; }
+.drive-button.syncing .drive-dot   { background: #fbbf24; animation: blink-dot 1s infinite; }
+.drive-button.error .drive-dot     { background: #f87171; }
+@keyframes blink-dot { 0%,100%{opacity:1} 50%{opacity:.3} }
+
+/* Pulsante Aiuto — look moderno */
+.help-button-round {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 36px; height: 36px; border-radius: 50%;
+  background: #f1f5f9; border: 1.5px solid #e2e8f0;
+  color: #64748b; font-size: 16px; font-weight: 700; cursor: pointer;
+  transition: all 0.2s; box-shadow: 0 1px 3px rgba(0,0,0,.07);
+  margin: 4px !important;
+}
+.help-button-round:hover { background: #e2e8f0; color: #334155; }
+
+/* Modal Drive */
+#drive-modal .modal-content { max-width: 480px; }
+.drive-status-bar {
+  display: flex; align-items: center; gap: 8px;
+  padding: 10px 14px; border-radius: 8px; border: 1px solid;
+  margin-bottom: 14px; font-size: 0.9rem;
+}
+.drive-status-bar.ok  { background: #f0fdf4; border-color: #bbf7d0; color: #166534; }
+.drive-status-bar.err { background: #fef2f2; border-color: #fecaca; color: #991b1b; }
+.drive-actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
+.drive-actions button { flex: 1; min-width: 120px; }
+
+/* Drive save toast */
+.drive-toast {
+  position: fixed; bottom: 80px; right: 20px;
+  background: #1e293b; color: #fff; border-radius: 10px;
+  padding: 10px 16px; display: flex; align-items: center; gap: 10px;
+  font-size: 0.85rem; opacity: 0; pointer-events: none;
+  transform: translateY(8px); transition: all 0.3s; z-index: 9999;
+}
+.drive-toast.show { opacity: 1; transform: translateY(0); }
 
 /* Giudizio approssimato (indicatori misti) */
 .badge-approssimato {
@@ -1151,9 +1205,15 @@ td[class^="selezione-"] {
 </head>
 <body>
   <div class="container" id="app">
-    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
-      <h1 style="margin: 0; flex-grow: 1;">Generatore Valutazioni Comportamento Scuola Primaria</h1>
-      <button id="help-button" class="btn-blue" style="border-radius: 50%; width: 40px; height: 40px; font-size: 18px; font-weight: bold; margin-left: 15px;" title="Guida e aiuto">?</button>
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; gap: 8px;">
+      <h1 style="margin: 0; flex-grow: 1; font-size: clamp(1rem, 3vw, 1.4rem);">Valutazione Comportamento — Scuola Primaria</h1>
+      <div style="display:flex; align-items:center; gap:4px; flex-shrink:0;">
+        <button id="drive-btn" class="drive-button no-print" onclick="openDriveModal()" title="Salva su Google Drive">
+          <span class="drive-dot"></span>
+          <span id="drive-btn-label">Drive</span>
+        </button>
+        <button id="help-button" class="help-button-round no-print" title="Guida e aiuto">?</button>
+      </div>
     </div>
     <h2 id="header-school" class="header-school">Informazioni scuola (clicca per modificare)</h2>
     
@@ -1244,7 +1304,7 @@ td[class^="selezione-"] {
     
     <!-- Footer per schermo -->
     <footer class="footer-signature no-print">
-      Comportamento Scuola v2.0 — EduTechLab © 2026 - Fabio Rizzotto
+      Comportamento Scuola v3.0 — EduTechLab © 2026 - Fabio Rizzotto
     </footer>
   
     <!-- FASE INSERIMENTO DATI -->
@@ -1604,9 +1664,17 @@ td[class^="selezione-"] {
               <p><strong>Q: Come viene calcolato il giudizio automatico?</strong></p>
               <p style="margin-left: 20px; color: #666;">A: Secondo la delibera del Collegio Docenti (30/04/2026): se almeno 4 indicatori su 5 corrispondono allo stesso livello, viene assegnato quel livello (OTTIMO richiede tutti e 5). In caso di indicatori misti, viene calcolata la media assegnando OTTIMO=10, DISTINTO=9, BUONO=8, DISCRETO=7, SUFFICIENTE=6, NON SUFFICIENTE=5 e arrotondando allo 0,5 per eccesso. NON SUFFICIENTE non viene mai assegnato automaticamente nei casi misti.</p>
             </div>
-            <div>
+            <div style="margin-bottom: 15px;">
               <p><strong>Q: Posso personalizzare gli indicatori?</strong></p>
               <p style="margin-left: 20px; color: #666;">A: Gli indicatori seguono la griglia ufficiale deliberata dal Collegio Docenti dell'IC di Gottolengo.</p>
+            </div>
+            <div style="margin-bottom: 15px;">
+              <p><strong>Q: I miei dati vengono salvati tra una sessione e l'altra?</strong></p>
+              <p style="margin-left: 20px; color: #666;">A: Sì, tramite Google Drive. Clicca il pulsante <strong>Drive</strong> in alto a destra e collegati con il tuo account Google scolastico. Da quel momento ogni modifica viene salvata automaticamente. I dati sono in: Drive → <em>Valutazione-Primaria-Dati</em> → <em>{anno scolastico}</em> → <code>comportamento_dati.json</code>. Se usi anche Valutazione Primaria, i due file convivono nella stessa cartella.</p>
+            </div>
+            <div>
+              <p><strong>Q: È sicuro usare Google Drive?</strong></p>
+              <p style="margin-left: 20px; color: #666;">A: Sì. L'app usa l'autorizzazione <em>drive.file</em> che le permette di accedere solo ai file che crea lei stessa — non può leggere o modificare il resto del tuo Drive. I dati non transitano su nessun server intermedio: vanno direttamente dal tuo browser a Google Drive.</p>
             </div>
           </div>
         </div>
@@ -1886,7 +1954,8 @@ if (!schoolInfo.istituto) {
         
         // Salva in localStorage
         localStorage.setItem('schoolInfo', JSON.stringify(schoolInfo));
-        
+        scheduleDriveSave();
+
         // Aggiorna visualizzazione
         updateSchoolInfoDisplay();
         
@@ -2789,8 +2858,10 @@ document.getElementById('nome-studente-attuale').textContent = studenti[studente
         
         // Aggiorna giudizio finale inline
         aggiornaGiudizioFinale();
+        // Salva su Drive (debounced 2s)
+        scheduleDriveSave();
       }
-      
+
       // Aggiorna giudizio finale inline
       function aggiornaGiudizioFinale() {
         const valutazione = valutazioniCompletate[studenteAttuale];
@@ -2815,17 +2886,18 @@ document.getElementById('nome-studente-attuale').textContent = studenti[studente
       document.getElementById('prev-studente').addEventListener('click', function() {
         // Salva note
         noteStudenti[studenteAttuale] = document.getElementById('note-studente').value;
-        
+        scheduleDriveSave();
         // Vai allo studente precedente
         if (studenteAttuale > 0) {
           studenteAttuale--;
           aggiornaVistaValutazione();
         }
       });
-      
+
       document.getElementById('next-studente').addEventListener('click', function() {
         // Salva note
         noteStudenti[studenteAttuale] = document.getElementById('note-studente').value;
+        scheduleDriveSave();
         
         // Controlla che tutti gli indicatori siano compilati
         if (valutazioniCompletate[studenteAttuale].includes(null)) {
@@ -3325,6 +3397,348 @@ document.addEventListener('DOMContentLoaded', function() {
     });
   });
 });
+</script>
+
+<!-- Modal Google Drive -->
+<div id="drive-modal" class="modal-overlay" style="display:none;">
+  <div class="modal-content" style="max-width:480px;">
+    <button type="button" class="close-modal" aria-label="Chiudi" onclick="document.getElementById('drive-modal').style.display='none'">&times;</button>
+    <div class="modal-header">
+      <h2>💾 Google Drive</h2>
+      <p>Collega il tuo account Google per salvare i dati automaticamente sul tuo Drive scolastico. Accessibili da qualsiasi dispositivo, protetti dal tuo account.</p>
+    </div>
+
+    <!-- Pannello non connesso -->
+    <div id="drive-panel-connect" style="text-align:center; padding:8px 0 16px;">
+      <p style="margin-bottom:14px; font-size:0.9rem; color:#64748b; text-align:left; background:#f8fafc; padding:12px; border-radius:8px;">
+        I dati verranno salvati nella cartella <strong>"Valutazione-Primaria-Dati"</strong> sul tuo Drive,
+        sotto la sottocartella dell'anno scolastico corrente — così convivono con i dati di Valutazione Primaria in un'unica libreria.
+      </p>
+      <button type="button" onclick="connectToDrive()" style="background:#1e88e5; color:#fff; font-size:1rem; padding:12px 28px; width:100%; border:none; border-radius:8px; cursor:pointer; font-weight:600;">
+        🔗 &nbsp;Collega a Google Drive
+      </button>
+      <p style="margin-top:12px; font-size:0.8rem; color:#64748b;">
+        🛡️ L'app accede solo ai file che crea lei stessa, non al resto del tuo Drive.
+      </p>
+    </div>
+
+    <!-- Pannello connesso -->
+    <div id="drive-panel-connected" style="display:none;">
+      <div id="drive-status-bar" class="drive-status-bar ok">
+        <span>✅</span>
+        <span id="drive-status-text">Connesso — i dati vengono salvati automaticamente</span>
+      </div>
+      <div id="drive-user-info" style="font-size:0.85rem; color:#64748b; margin-bottom:14px; padding:8px 12px; background:#f8fafc; border-radius:8px;">
+        👤 <span id="drive-user-email"></span>
+        <span style="float:right; color:#94a3b8;">📁 <span id="drive-anno-label">—</span></span>
+      </div>
+      <div class="drive-actions">
+        <button type="button" onclick="syncFromDrive(true)" style="background:#1e88e5; color:#fff; border:none; border-radius:8px; padding:10px 16px; cursor:pointer; font-size:0.9rem;">
+          🔄 Ricarica da Drive
+        </button>
+        <button type="button" onclick="disconnectDrive()" style="background:#e53935; color:#fff; border:none; border-radius:8px; padding:10px 16px; cursor:pointer; font-size:0.9rem;">
+          Disconnetti
+        </button>
+      </div>
+      <p style="margin-top:12px; font-size:0.8rem; color:#64748b; background:#fef9c3; padding:10px 12px; border-radius:8px;">
+        💡 <strong>PC condiviso?</strong> Clicca <strong>Disconnetti</strong> al termine: rimuove i tuoi dati dal browser e li lascia al sicuro solo sul tuo Drive.
+      </p>
+    </div>
+
+    <!-- Pannello errore -->
+    <div id="drive-panel-error" style="display:none; text-align:center; padding:8px 0 12px;">
+      <div id="drive-status-bar-err" class="drive-status-bar err">
+        <span>⚠️</span>
+        <span id="drive-error-text">Errore di connessione</span>
+      </div>
+      <button type="button" onclick="connectToDrive()" style="background:#1e88e5; color:#fff; width:100%; margin-top:10px; border:none; border-radius:8px; padding:12px; cursor:pointer; font-size:0.95rem;">
+        🔄 Riprova
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Drive save toast -->
+<div id="drive-toast" class="drive-toast no-print">
+  <span>✓</span>
+  <span>Dati salvati su Google Drive</span>
+</div>
+
+<!-- Google Drive Integration -->
+<script>
+/* ─────────────────────────────────────────
+   GOOGLE DRIVE — Comportamento Scuola
+   Salva comportamento_dati.json in:
+   Drive → Valutazione-Primaria-Dati → {anno} → comportamento_dati.json
+   (stessa cartella root di Valutazione Primaria)
+───────────────────────────────────────── */
+const DRIVE_CLIENT_ID   = '374342529488-c123a5j5v8hnfs241udbl55fos5thfq6.apps.googleusercontent.com';
+const DRIVE_SCOPE       = 'https://www.googleapis.com/auth/drive.file email profile';
+const DRIVE_FOLDER_NAME = 'Valutazione-Primaria-Dati';
+const DRIVE_FILE_NAME   = 'comportamento_dati.json';
+
+let driveState = {
+  enabled:      false,
+  accessToken:  null,
+  tokenExpiry:  0,
+  fileId:       null,
+  folderId:     null,
+  yearFolderId: null,
+  userEmail:    ''
+};
+
+function loadDriveConfig() {
+  try {
+    const saved = localStorage.getItem('driveState_comportamento_v1');
+    if (saved) driveState = Object.assign(driveState, JSON.parse(saved));
+  } catch(e) {}
+  updateDriveButton();
+  if (driveState.enabled && driveState.accessToken && Date.now() < driveState.tokenExpiry - 30000) {
+    syncFromDrive(false);
+  } else if (driveState.enabled) {
+    trySilentAuth();
+  }
+}
+
+function saveDriveStateLocal() {
+  localStorage.setItem('driveState_comportamento_v1', JSON.stringify(driveState));
+}
+
+function updateDriveButton() {
+  const btn   = document.getElementById('drive-btn');
+  const label = document.getElementById('drive-btn-label');
+  if (!btn) return;
+  const connected = driveState.enabled && driveState.accessToken && Date.now() < driveState.tokenExpiry;
+  btn.className = 'drive-button no-print';
+  if (connected) {
+    btn.classList.add('connected');
+    label.textContent = driveState.userEmail ? driveState.userEmail.split('@')[0] : 'Drive';
+    const emailEl = document.getElementById('drive-user-email');
+    if (emailEl) emailEl.textContent = driveState.userEmail;
+    const annoEl = document.getElementById('drive-anno-label');
+    if (annoEl) annoEl.textContent = (typeof schoolInfo !== 'undefined' && schoolInfo.annoScolastico) ? schoolInfo.annoScolastico : '—';
+  } else {
+    label.textContent = 'Drive';
+  }
+}
+
+function openDriveModal() {
+  const connected = driveState.enabled && driveState.accessToken && Date.now() < driveState.tokenExpiry;
+  document.getElementById('drive-panel-connect').style.display    = connected ? 'none'  : 'block';
+  document.getElementById('drive-panel-connected').style.display  = connected ? 'block' : 'none';
+  document.getElementById('drive-panel-error').style.display      = 'none';
+  document.getElementById('drive-modal').style.display = 'flex';
+}
+
+function connectToDrive() {
+  if (typeof google === 'undefined' || !google.accounts) {
+    alert('Impossibile caricare Google Sign-In. Controlla la connessione internet e riprova.');
+    return;
+  }
+  const client = google.accounts.oauth2.initTokenClient({
+    client_id: DRIVE_CLIENT_ID,
+    scope: DRIVE_SCOPE,
+    callback: async (tokenResponse) => {
+      if (tokenResponse.error) { showDriveError('Accesso negato: ' + tokenResponse.error); return; }
+      driveState.accessToken = tokenResponse.access_token;
+      driveState.tokenExpiry = Date.now() + (tokenResponse.expires_in * 1000);
+      driveState.enabled     = true;
+      await afterAuth();
+    }
+  });
+  client.requestAccessToken();
+}
+
+function trySilentAuth() {
+  if (typeof google === 'undefined' || !google.accounts) return;
+  const client = google.accounts.oauth2.initTokenClient({
+    client_id: DRIVE_CLIENT_ID,
+    scope: DRIVE_SCOPE,
+    prompt: '',
+    callback: async (tokenResponse) => {
+      if (tokenResponse.error) { updateDriveButton(); return; }
+      driveState.accessToken = tokenResponse.access_token;
+      driveState.tokenExpiry = Date.now() + (tokenResponse.expires_in * 1000);
+      await afterAuth();
+    }
+  });
+  client.requestAccessToken();
+}
+
+async function afterAuth() {
+  try {
+    const info = await driveApiFetch('https://www.googleapis.com/oauth2/v3/userinfo');
+    driveState.userEmail = info.email || '';
+    driveState.folderId = await findOrCreateDriveFolder();
+    const anno = (typeof schoolInfo !== 'undefined' && schoolInfo.annoScolastico && schoolInfo.annoScolastico.trim())
+      ? schoolInfo.annoScolastico.trim() : 'Anno-non-impostato';
+    driveState.yearFolderId = await findOrCreateYearFolder(anno);
+    driveState.fileId = await findDriveFile();
+    saveDriveStateLocal();
+    updateDriveButton();
+    document.getElementById('drive-panel-connect').style.display   = 'none';
+    document.getElementById('drive-panel-error').style.display     = 'none';
+    document.getElementById('drive-panel-connected').style.display = 'block';
+    const emailEl = document.getElementById('drive-user-email');
+    if (emailEl) emailEl.textContent = driveState.userEmail;
+    const annoEl = document.getElementById('drive-anno-label');
+    if (annoEl) annoEl.textContent = anno;
+    if (driveState.fileId) {
+      await syncFromDrive(true);
+    }
+  } catch(e) {
+    showDriveError('Errore connessione: ' + e.message);
+  }
+}
+
+async function findOrCreateDriveFolder() {
+  const q = encodeURIComponent(`name='${DRIVE_FOLDER_NAME}' and mimeType='application/vnd.google-apps.folder' and trashed=false`);
+  const resp = await driveApiFetch(`https://www.googleapis.com/drive/v3/files?q=${q}&fields=files(id,name)`);
+  if (resp.files && resp.files.length > 0) return resp.files[0].id;
+  const created = await driveApiFetch('https://www.googleapis.com/drive/v3/files', 'POST',
+    { name: DRIVE_FOLDER_NAME, mimeType: 'application/vnd.google-apps.folder' });
+  return created.id;
+}
+
+async function findOrCreateYearFolder(anno) {
+  const q = encodeURIComponent(`name='${anno}' and '${driveState.folderId}' in parents and mimeType='application/vnd.google-apps.folder' and trashed=false`);
+  const resp = await driveApiFetch(`https://www.googleapis.com/drive/v3/files?q=${q}&fields=files(id,name)`);
+  if (resp.files && resp.files.length > 0) return resp.files[0].id;
+  const created = await driveApiFetch('https://www.googleapis.com/drive/v3/files', 'POST',
+    { name: anno, mimeType: 'application/vnd.google-apps.folder', parents: [driveState.folderId] });
+  return created.id;
+}
+
+async function findDriveFile() {
+  const q = encodeURIComponent(`name='${DRIVE_FILE_NAME}' and trashed=false`);
+  const resp = await driveApiFetch(
+    `https://www.googleapis.com/drive/v3/files?q=${q}&fields=files(id,name,modifiedTime)&orderBy=modifiedTime%20desc`
+  );
+  if (resp.files && resp.files.length > 0) return resp.files[0].id;
+  return null;
+}
+
+async function syncFromDrive(showFeedback) {
+  if (!driveState.enabled || !driveState.accessToken || !driveState.fileId) return;
+  try {
+    const resp = await fetch(
+      `https://www.googleapis.com/drive/v3/files/${driveState.fileId}?alt=media`,
+      { headers: { Authorization: 'Bearer ' + driveState.accessToken } }
+    );
+    if (!resp.ok) throw new Error('HTTP ' + resp.status);
+    const data = await resp.json();
+    if (data.studenti && Array.isArray(data.studenti))
+      studenti = [...data.studenti];
+    if (data.valutazioniCompletate && Array.isArray(data.valutazioniCompletate))
+      valutazioniCompletate = JSON.parse(JSON.stringify(data.valutazioniCompletate));
+    if (data.noteStudenti && Array.isArray(data.noteStudenti))
+      noteStudenti = [...data.noteStudenti];
+    if (data.giudiziPersonalizzati)
+      giudiziPersonalizzati = Array.isArray(data.giudiziPersonalizzati)
+        ? [...data.giudiziPersonalizzati] : data.giudiziPersonalizzati;
+    if (data.datiClasse)
+      datiClasse = JSON.parse(JSON.stringify(data.datiClasse));
+    if (data.schoolInfo) {
+      schoolInfo = JSON.parse(JSON.stringify(data.schoolInfo));
+      localStorage.setItem('schoolInfo', JSON.stringify(schoolInfo));
+    }
+    if (typeof aggiornaListaStudenti === 'function') aggiornaListaStudenti();
+    const hdr = document.getElementById('header-school');
+    if (hdr) hdr.textContent = (schoolInfo && schoolInfo.istituto) ? schoolInfo.istituto : 'Informazioni scuola (clicca per modificare)';
+    if (showFeedback) showDriveToast();
+  } catch(e) {
+    if (showFeedback) showDriveError('Errore lettura da Drive: ' + e.message);
+  }
+}
+
+let _driveSaveTimer = null;
+function scheduleDriveSave() {
+  clearTimeout(_driveSaveTimer);
+  _driveSaveTimer = setTimeout(saveToDrive, 2000);
+}
+
+async function saveToDrive() {
+  if (!driveState.enabled || !driveState.accessToken) return;
+  if (Date.now() > driveState.tokenExpiry) { updateDriveButton(); return; }
+  const btn = document.getElementById('drive-btn');
+  if (btn) { btn.classList.remove('connected'); btn.classList.add('syncing'); }
+  try {
+    if (!driveState.folderId) driveState.folderId = await findOrCreateDriveFolder();
+    if (!driveState.yearFolderId) {
+      const anno = (typeof schoolInfo !== 'undefined' && schoolInfo.annoScolastico && schoolInfo.annoScolastico.trim())
+        ? schoolInfo.annoScolastico.trim() : 'Anno-non-impostato';
+      driveState.yearFolderId = await findOrCreateYearFolder(anno);
+    }
+    const exportData = {
+      datiClasse:             datiClasse || {},
+      schoolInfo:             schoolInfo || {},
+      studenti:               Array.isArray(studenti)               ? studenti               : [],
+      valutazioniCompletate:  Array.isArray(valutazioniCompletate)  ? valutazioniCompletate  : [],
+      noteStudenti:           Array.isArray(noteStudenti)           ? noteStudenti           : [],
+      giudiziPersonalizzati:  giudiziPersonalizzati
+    };
+    const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
+    const parentId = driveState.yearFolderId || driveState.folderId;
+    const metadata = driveState.fileId ? {} : { name: DRIVE_FILE_NAME, parents: [parentId] };
+    const form = new FormData();
+    form.append('metadata', new Blob([JSON.stringify(metadata)], { type: 'application/json' }));
+    form.append('file', blob);
+    const url    = driveState.fileId
+      ? `https://www.googleapis.com/upload/drive/v3/files/${driveState.fileId}?uploadType=multipart`
+      : `https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart`;
+    const method = driveState.fileId ? 'PATCH' : 'POST';
+    const res = await fetch(url, {
+      method,
+      headers: { Authorization: 'Bearer ' + driveState.accessToken },
+      body: form
+    });
+    const result = await res.json();
+    if (!driveState.fileId) driveState.fileId = result.id;
+    saveDriveStateLocal();
+    if (btn) { btn.classList.remove('syncing'); btn.classList.add('connected'); }
+    showDriveToast();
+  } catch(e) {
+    if (btn) { btn.classList.remove('syncing'); }
+    updateDriveButton();
+  }
+}
+
+function disconnectDrive() {
+  if (driveState.accessToken && typeof google !== 'undefined' && google.accounts) {
+    google.accounts.oauth2.revoke(driveState.accessToken);
+  }
+  driveState = { enabled: false, accessToken: null, tokenExpiry: 0, fileId: null, folderId: null, yearFolderId: null, userEmail: '' };
+  saveDriveStateLocal();
+  updateDriveButton();
+  document.getElementById('drive-modal').style.display = 'none';
+}
+
+function showDriveToast() {
+  const toast = document.getElementById('drive-toast');
+  if (!toast) return;
+  toast.classList.add('show');
+  setTimeout(() => toast.classList.remove('show'), 2500);
+}
+
+function showDriveError(msg) {
+  document.getElementById('drive-panel-connect').style.display   = 'none';
+  document.getElementById('drive-panel-connected').style.display = 'none';
+  document.getElementById('drive-panel-error').style.display     = 'block';
+  document.getElementById('drive-error-text').textContent = msg;
+  updateDriveButton();
+  const btn = document.getElementById('drive-btn');
+  if (btn) { btn.classList.remove('syncing', 'connected'); btn.classList.add('error'); }
+}
+
+async function driveApiFetch(url, method, body) {
+  const opts = { method: method || 'GET', headers: { Authorization: 'Bearer ' + driveState.accessToken } };
+  if (body) { opts.headers['Content-Type'] = 'application/json'; opts.body = JSON.stringify(body); }
+  const resp = await fetch(url, opts);
+  if (!resp.ok) throw new Error('Drive API error ' + resp.status);
+  return resp.json();
+}
+
+window.addEventListener('load', () => setTimeout(loadDriveConfig, 600));
 </script>
 
 <!-- PWA Service Worker Registration -->
