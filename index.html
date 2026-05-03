@@ -3625,6 +3625,9 @@ async function afterAuth() {
     if (annoEl) annoEl.textContent = anno;
     if (driveState.fileId) {
       await syncFromDrive(true);
+    } else {
+      // Prima connessione: salva subito i dati presenti nell'app
+      scheduleDriveSave();
     }
   } catch(e) {
     showDriveError('Errore connessione: ' + e.message);
