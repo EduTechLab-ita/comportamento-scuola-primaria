@@ -1907,7 +1907,21 @@ td[class^="selezione-"] {
       let studenteAttuale = 0;
       let giudiziPersonalizzati = [];
       let studentiImportazioneTemp = [];
-      
+
+      // Bridge Drive ↔ app: espone getter/setter globali per le variabili di stato
+      window._getAppData = () => ({ datiClasse, schoolInfo, studenti, valutazioniCompletate, noteStudenti, giudiziPersonalizzati });
+      window._setAppData = (data) => {
+        if (data.studenti) studenti = [...data.studenti];
+        if (data.valutazioniCompletate) valutazioniCompletate = JSON.parse(JSON.stringify(data.valutazioniCompletate));
+        if (data.noteStudenti) noteStudenti = [...data.noteStudenti];
+        if (data.giudiziPersonalizzati) giudiziPersonalizzati = Array.isArray(data.giudiziPersonalizzati) ? [...data.giudiziPersonalizzati] : data.giudiziPersonalizzati;
+        if (data.datiClasse) datiClasse = JSON.parse(JSON.stringify(data.datiClasse));
+        if (data.schoolInfo) { schoolInfo = JSON.parse(JSON.stringify(data.schoolInfo)); localStorage.setItem('schoolInfo', JSON.stringify(schoolInfo)); }
+        if (typeof aggiornaListaStudenti === 'function') aggiornaListaStudenti();
+        const hdr = document.getElementById('header-school');
+        if (hdr) hdr.textContent = (schoolInfo && schoolInfo.istituto) ? schoolInfo.istituto : 'Informazioni scuola (clicca per modificare)';
+      };
+
       // Funzione per normalizzare il valore di giudizio per le classi CSS
       function normalizzaGiudizioCSS(giudizio) {
         // Per le classi CSS, usa l'underscore
@@ -3610,8 +3624,9 @@ async function afterAuth() {
     const info = await driveApiFetch('https://www.googleapis.com/oauth2/v3/userinfo');
     driveState.userEmail = info.email || '';
     driveState.folderId = await findOrCreateDriveFolder();
-    const anno = (typeof schoolInfo !== 'undefined' && schoolInfo.annoScolastico && schoolInfo.annoScolastico.trim())
-      ? schoolInfo.annoScolastico.trim() : 'Anno-non-impostato';
+    const si = (window._getAppData ? window._getAppData().schoolInfo : null)
+             || JSON.parse(localStorage.getItem('schoolInfo') || '{}');
+    const anno = (si.annoScolastico && si.annoScolastico.trim()) ? si.annoScolastico.trim() : 'Anno-non-impostato';
     driveState.yearFolderId = await findOrCreateYearFolder(anno);
     driveState.fileId = await findDriveFile();
     saveDriveStateLocal();
@@ -3670,24 +3685,9 @@ async function syncFromDrive(showFeedback) {
     );
     if (!resp.ok) throw new Error('HTTP ' + resp.status);
     const data = await resp.json();
-    if (data.studenti && Array.isArray(data.studenti))
-      studenti = [...data.studenti];
-    if (data.valutazioniCompletate && Array.isArray(data.valutazioniCompletate))
-      valutazioniCompletate = JSON.parse(JSON.stringify(data.valutazioniCompletate));
-    if (data.noteStudenti && Array.isArray(data.noteStudenti))
-      noteStudenti = [...data.noteStudenti];
-    if (data.giudiziPersonalizzati)
-      giudiziPersonalizzati = Array.isArray(data.giudiziPersonalizzati)
-        ? [...data.giudiziPersonalizzati] : data.giudiziPersonalizzati;
-    if (data.datiClasse)
-      datiClasse = JSON.parse(JSON.stringify(data.datiClasse));
-    if (data.schoolInfo) {
-      schoolInfo = JSON.parse(JSON.stringify(data.schoolInfo));
-      localStorage.setItem('schoolInfo', JSON.stringify(schoolInfo));
+    if (window._setAppData) {
+      window._setAppData(data);
     }
-    if (typeof aggiornaListaStudenti === 'function') aggiornaListaStudenti();
-    const hdr = document.getElementById('header-school');
-    if (hdr) hdr.textContent = (schoolInfo && schoolInfo.istituto) ? schoolInfo.istituto : 'Informazioni scuola (clicca per modificare)';
     if (showFeedback) showDriveToast();
   } catch(e) {
     if (showFeedback) showDriveError('Errore lettura da Drive: ' + e.message);
@@ -3708,17 +3708,19 @@ async function saveToDrive() {
   try {
     if (!driveState.folderId) driveState.folderId = await findOrCreateDriveFolder();
     if (!driveState.yearFolderId) {
-      const anno = (typeof schoolInfo !== 'undefined' && schoolInfo.annoScolastico && schoolInfo.annoScolastico.trim())
-        ? schoolInfo.annoScolastico.trim() : 'Anno-non-impostato';
-      driveState.yearFolderId = await findOrCreateYearFolder(anno);
+      const si2 = (window._getAppData ? window._getAppData().schoolInfo : null)
+               || JSON.parse(localStorage.getItem('schoolInfo') || '{}');
+      const anno2 = (si2.annoScolastico && si2.annoScolastico.trim()) ? si2.annoScolastico.trim() : 'Anno-non-impostato';
+      driveState.yearFolderId = await findOrCreateYearFolder(anno2);
     }
+    const _state = window._getAppData ? window._getAppData() : {};
     const exportData = {
-      datiClasse:             datiClasse || {},
-      schoolInfo:             schoolInfo || {},
-      studenti:               Array.isArray(studenti)               ? studenti               : [],
-      valutazioniCompletate:  Array.isArray(valutazioniCompletate)  ? valutazioniCompletate  : [],
-      noteStudenti:           Array.isArray(noteStudenti)           ? noteStudenti           : [],
-      giudiziPersonalizzati:  giudiziPersonalizzati
+      datiClasse:             _state.datiClasse            || {},
+      schoolInfo:             _state.schoolInfo            || JSON.parse(localStorage.getItem('schoolInfo') || '{}'),
+      studenti:               Array.isArray(_state.studenti)              ? _state.studenti              : [],
+      valutazioniCompletate:  Array.isArray(_state.valutazioniCompletate) ? _state.valutazioniCompletate : [],
+      noteStudenti:           Array.isArray(_state.noteStudenti)          ? _state.noteStudenti          : [],
+      giudiziPersonalizzati:  _state.giudiziPersonalizzati
     };
     const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
     const parentId = driveState.yearFolderId || driveState.folderId;
@@ -3828,18 +3830,7 @@ async function caricaAnnoArchiviato(folderId, annoName) {
       { headers: { Authorization: 'Bearer ' + driveState.accessToken } }
     )).json();
     // Ripristina (sola lettura — non aggiorna driveState.fileId così non sovrascrive)
-    if (data.studenti)              studenti              = [...data.studenti];
-    if (data.valutazioniCompletate) valutazioniCompletate = JSON.parse(JSON.stringify(data.valutazioniCompletate));
-    if (data.noteStudenti)          noteStudenti          = [...data.noteStudenti];
-    if (data.giudiziPersonalizzati) giudiziPersonalizzati = Array.isArray(data.giudiziPersonalizzati) ? [...data.giudiziPersonalizzati] : data.giudiziPersonalizzati;
-    if (data.datiClasse)            datiClasse            = JSON.parse(JSON.stringify(data.datiClasse));
-    if (data.schoolInfo) {
-      schoolInfo = JSON.parse(JSON.stringify(data.schoolInfo));
-      localStorage.setItem('schoolInfo', JSON.stringify(schoolInfo));
-    }
-    if (typeof aggiornaListaStudenti === 'function') aggiornaListaStudenti();
-    const hdr = document.getElementById('header-school');
-    if (hdr) hdr.textContent = (schoolInfo && schoolInfo.istituto) ? schoolInfo.istituto : 'Informazioni scuola (clicca per modificare)';
+    if (window._setAppData) window._setAppData(data);
     document.getElementById('drive-modal').style.display = 'none';
     mostraNotifica('Anno ' + annoName + ' caricato (sola lettura)', 'success');
   } catch(e) {
