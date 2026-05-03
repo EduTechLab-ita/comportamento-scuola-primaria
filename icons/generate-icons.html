@@ -6,105 +6,93 @@
 <style>
   body { font-family: sans-serif; padding: 20px; background: #f8fafc; }
   h1 { color: #1565c0; }
-  .grid { display: flex; flex-wrap: wrap; gap: 16px; margin: 20px 0; }
+  .grid { display: flex; flex-wrap: wrap; gap: 20px; margin: 20px 0; align-items: flex-end; }
   .icon-item { text-align: center; }
-  .icon-item canvas { display: block; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,.15); }
-  .icon-item p { font-size: 12px; color: #64748b; margin: 4px 0; }
+  .icon-item canvas { display: block; border-radius: 12%; box-shadow: 0 2px 8px rgba(0,0,0,.2); }
+  .icon-item p { font-size: 12px; color: #64748b; margin: 6px 0 0; }
   button { background: #1565c0; color: white; border: none; padding: 12px 24px;
            border-radius: 8px; font-size: 1rem; cursor: pointer; margin: 4px; }
   button:hover { background: #0d47a1; }
-  #status { margin-top: 16px; color: #166534; font-weight: 600; }
+  #status { margin-top: 16px; color: #166534; font-weight: 600; font-size: 1.1rem; }
 </style>
 </head>
 <body>
 <h1>🎨 Generatore Icone — Comportamento Scuola</h1>
-<p>Clicca <strong>Genera tutte</strong> per creare i PNG, poi <strong>Scarica tutte</strong> per salvarle.</p>
-<button onclick="generateAll()">🖼 Genera tutte</button>
+<p>Clicca <strong>Genera e mostra</strong> per vedere le icone, poi <strong>Scarica tutte</strong> per salvarle nella cartella icons/.</p>
+<button onclick="generateAll()">🖼 Genera e mostra</button>
 <button onclick="downloadAll()">⬇️ Scarica tutte</button>
 <div id="status"></div>
 <div class="grid" id="grid"></div>
 
 <script>
 const SIZES = [72, 96, 128, 144, 152, 192, 384, 512];
-const canvases = {};
+const canvasMap = {};
 
-function drawIcon(ctx, size) {
+function drawIcon(canvas, size) {
+  const ctx = canvas.getContext('2d');
   const s = size;
-  const r = s * 0.188; // border-radius ~96/512
+  const sc = s / 512;
 
-  // Background rounded rect
+  // Sfondo arrotondato blu
+  const r = s * 0.188;
   ctx.beginPath();
   ctx.moveTo(r, 0);
-  ctx.lineTo(s - r, 0);
-  ctx.arcTo(s, 0, s, r, r);
-  ctx.lineTo(s, s - r);
-  ctx.arcTo(s, s, s - r, s, r);
-  ctx.lineTo(r, s);
-  ctx.arcTo(0, s, 0, s - r, r);
-  ctx.lineTo(0, r);
-  ctx.arcTo(0, 0, r, 0, r);
+  ctx.lineTo(s - r, 0); ctx.arcTo(s, 0, s, r, r);
+  ctx.lineTo(s, s - r); ctx.arcTo(s, s, s - r, s, r);
+  ctx.lineTo(r, s);     ctx.arcTo(0, s, 0, s - r, r);
+  ctx.lineTo(0, r);     ctx.arcTo(0, 0, r, 0, r);
   ctx.closePath();
   ctx.fillStyle = '#1565c0';
   ctx.fill();
 
-  const sc = s / 512;
+  // Corpo clipboard bianco
+  fillRoundRect(ctx, 120*sc, 140*sc, 272*sc, 300*sc, 22*sc, 'white');
 
-  // Clipboard body
-  roundRect(ctx, 120*sc, 140*sc, 272*sc, 300*sc, 22*sc, 'white');
+  // Clip superiore (parte scura)
+  fillRoundRect(ctx, 196*sc, 118*sc, 120*sc, 46*sc, 14*sc, '#0d47a1');
+  // Slot bianco interno
+  fillRoundRect(ctx, 218*sc, 128*sc, 76*sc, 24*sc, 8*sc, 'white');
 
-  // Clipboard top dark
-  roundRect(ctx, 196*sc, 120*sc, 120*sc, 44*sc, 14*sc, '#0d47a1');
-  // Clipboard top white fill (slot)
-  ctx.fillStyle = 'white';
-  ctx.fillRect(218*sc, 122*sc, 76*sc, 30*sc);
-  roundRect(ctx, 218*sc, 120*sc, 76*sc, 20*sc, 8*sc, '#0d47a1');
-
-  // Row lines
-  const rows = [215, 258, 301, 344, 387];
-  ctx.fillStyle = '#bbdefb';
-  rows.forEach(y => {
-    roundRect(ctx, 150*sc, y*sc, 108*sc, 9*sc, 4*sc, '#bbdefb');
+  // 5 righe indicatori (rettangolini azzurri)
+  const righeY = [215, 260, 305, 350, 393];
+  righeY.forEach(y => {
+    fillRoundRect(ctx, 148*sc, y*sc, 110*sc, 10*sc, 5*sc, '#bbdefb');
   });
 
-  // Evaluation dots
+  // Cerchi colorati (livelli assegnati)
   const dotColors = ['#43a047', '#43a047', '#29b6f6', '#fdd835', '#43a047'];
-  const dotY = [219, 262, 305, 348, 391];
+  const dotY      = [220, 265, 310, 355, 398];
   dotY.forEach((y, i) => {
     ctx.beginPath();
-    ctx.arc(310*sc, y*sc, 18*sc, 0, Math.PI * 2);
+    ctx.arc(316*sc, y*sc, 20*sc, 0, Math.PI * 2);
     ctx.fillStyle = dotColors[i];
     ctx.fill();
   });
 
-  // Green checkmark badge (bottom right)
+  // Badge verde con checkmark in basso a destra
   ctx.beginPath();
-  ctx.arc(370*sc, 400*sc, 40*sc, 0, Math.PI * 2);
-  ctx.fillStyle = '#43a047';
+  ctx.arc(368*sc, 398*sc, 38*sc, 0, Math.PI * 2);
+  ctx.fillStyle = '#2e7d32';
   ctx.fill();
 
-  // Checkmark
   ctx.beginPath();
-  ctx.moveTo(353*sc, 400*sc);
-  ctx.lineTo(364*sc, 412*sc);
-  ctx.lineTo(389*sc, 387*sc);
+  ctx.moveTo(352*sc, 398*sc);
+  ctx.lineTo(363*sc, 410*sc);
+  ctx.lineTo(386*sc, 384*sc);
   ctx.strokeStyle = 'white';
-  ctx.lineWidth = 8*sc;
+  ctx.lineWidth = 7*sc;
   ctx.lineCap = 'round';
   ctx.lineJoin = 'round';
   ctx.stroke();
 }
 
-function roundRect(ctx, x, y, w, h, r, color) {
+function fillRoundRect(ctx, x, y, w, h, r, color) {
   ctx.beginPath();
   ctx.moveTo(x + r, y);
-  ctx.lineTo(x + w - r, y);
-  ctx.arcTo(x + w, y, x + w, y + r, r);
-  ctx.lineTo(x + w, y + h - r);
-  ctx.arcTo(x + w, y + h, x + w - r, y + h, r);
-  ctx.lineTo(x + r, y + h);
-  ctx.arcTo(x, y + h, x, y + h - r, r);
-  ctx.lineTo(x, y + r);
-  ctx.arcTo(x, y, x + r, y, r);
+  ctx.lineTo(x + w - r, y); ctx.arcTo(x + w, y, x + w, y + r, r);
+  ctx.lineTo(x + w, y + h - r); ctx.arcTo(x + w, y + h, x + w - r, y + h, r);
+  ctx.lineTo(x + r, y + h); ctx.arcTo(x, y + h, x, y + h - r, r);
+  ctx.lineTo(x, y + r); ctx.arcTo(x, y, x + r, y, r);
   ctx.closePath();
   ctx.fillStyle = color;
   ctx.fill();
@@ -113,35 +101,54 @@ function roundRect(ctx, x, y, w, h, r, color) {
 function generateAll() {
   const grid = document.getElementById('grid');
   grid.innerHTML = '';
+
   SIZES.forEach(size => {
     const canvas = document.createElement('canvas');
-    canvas.width = size;
+    canvas.width  = size;
     canvas.height = size;
-    const ctx = canvas.getContext('2d');
-    drawIcon(ctx, size);
-    canvases[size] = canvas;
+    drawIcon(canvas, size);
+    canvasMap[size] = canvas;
+
+    // Mostra a 96px max per non occupare troppo spazio
+    const displaySize = Math.min(size, 96);
+    canvas.style.width  = displaySize + 'px';
+    canvas.style.height = displaySize + 'px';
+
+    const label = document.createElement('p');
+    label.textContent = size + '×' + size;
 
     const item = document.createElement('div');
     item.className = 'icon-item';
     item.appendChild(canvas);
-    item.innerHTML += `<p>${size}×${size}</p>`;
+    item.appendChild(label);
     grid.appendChild(item);
   });
+
   document.getElementById('status').textContent = '✅ Icone generate! Ora clicca "Scarica tutte".';
 }
 
 function downloadAll() {
-  if (!Object.keys(canvases).length) { generateAll(); }
+  if (!Object.keys(canvasMap).length) {
+    generateAll();
+    setTimeout(doDownload, 300);
+  } else {
+    doDownload();
+  }
+}
+
+function doDownload() {
   let delay = 0;
   SIZES.forEach(size => {
     setTimeout(() => {
-      const canvas = canvases[size];
+      const canvas = canvasMap[size];
       const link = document.createElement('a');
-      link.download = `icon-${size}x${size}.png`;
+      link.download = 'icon-' + size + 'x' + size + '.png';
       link.href = canvas.toDataURL('image/png');
+      document.body.appendChild(link);
       link.click();
+      document.body.removeChild(link);
     }, delay);
-    delay += 200;
+    delay += 250;
   });
 }
 </script>
