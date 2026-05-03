@@ -1240,7 +1240,7 @@ td[class^="selezione-"] {
         </div>
         <div class="form-group">
           <label for="anno-scolastico">Anno Scolastico:</label>
-          <input type="text" id="anno-scolastico" class="school-info-input" placeholder="Es. 2024/2025">
+          <input type="text" id="anno-scolastico" class="school-info-input" placeholder="Es. 2025/26">
         </div>
         <div class="form-group">
           <label for="plesso-modal">Plesso:</label>
@@ -1935,7 +1935,7 @@ td[class^="selezione-"] {
       
       // Imposta anno scolastico predefinito
       const annoCorrente = new Date().getFullYear();
-      const annoScolastico = `${annoCorrente}/${annoCorrente + 1}`;
+      const annoScolastico = `${annoCorrente}/${String(annoCorrente + 1).slice(2)}`;
       document.getElementById('anno-scolastico').value = annoScolastico;
       
       // Carica informazioni scolastiche
@@ -3531,6 +3531,18 @@ const DRIVE_SCOPE       = 'https://www.googleapis.com/auth/drive.file email prof
 const DRIVE_FOLDER_NAME = 'Valutazione-Primaria-Dati';
 const DRIVE_FILE_NAME   = 'comportamento_dati.json';
 
+// Normalizza il formato anno scolastico → sempre YYYY/YY (es. 2025/26)
+// Accetta: 25/26, 2025/26, 2025/2026, 25/2026
+function normalizzaAnnoScolastico(s) {
+  if (!s || !s.trim()) return null;
+  const m = s.trim().match(/^(\d{2,4})[\/\-\s](\d{2,4})$/);
+  if (!m) return s.trim();
+  let a = m[1], b = m[2];
+  if (a.length === 2) a = '20' + a;
+  if (b.length === 2) b = '20' + b;
+  return a + '/' + b.slice(2); // formato YYYY/YY
+}
+
 let driveState = {
   enabled:      false,
   accessToken:  null,
@@ -3627,7 +3639,7 @@ async function afterAuth() {
     driveState.folderId = await findOrCreateDriveFolder();
     const si = (window._getAppData ? window._getAppData().schoolInfo : null)
              || JSON.parse(localStorage.getItem('schoolInfo') || '{}');
-    const anno = (si.annoScolastico && si.annoScolastico.trim()) ? si.annoScolastico.trim() : null;
+    const anno = normalizzaAnnoScolastico(si.annoScolastico);
     if (anno) {
       driveState.yearFolderId = await findOrCreateYearFolder(anno);
       driveState.annoCartella = anno;
@@ -3725,7 +3737,7 @@ async function saveToDrive() {
     // Calcola anno corrente — se è cambiato rispetto alla cartella in uso, ricrea tutto
     const _si = (window._getAppData ? window._getAppData().schoolInfo : null)
              || JSON.parse(localStorage.getItem('schoolInfo') || '{}');
-    const annoCorrente = (_si.annoScolastico && _si.annoScolastico.trim()) ? _si.annoScolastico.trim() : null;
+    const annoCorrente = normalizzaAnnoScolastico(_si.annoScolastico);
     if (annoCorrente && annoCorrente !== driveState.annoCartella) {
       // Anno cambiato (o prima volta con anno reale): ricrea yearFolder e cerca/crea il file lì
       if (!driveState.folderId) driveState.folderId = await findOrCreateDriveFolder();
