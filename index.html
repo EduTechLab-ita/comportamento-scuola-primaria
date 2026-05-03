@@ -2073,7 +2073,8 @@ if (!schoolInfo.istituto) {
             }
             
             aggiornaListaStudenti();
-            
+            scheduleDriveSave();
+
       // Funzione per modifica manuale del giudizio
       function modificaGiudizio(studenteIndex) {
         const attuale = calcolaGiudizioFinale(valutazioniCompletate[studenteIndex], studenteIndex);
@@ -2183,6 +2184,7 @@ mostraNotifica("Dati importati con successo!", "success");
         noteStudenti.push('');
         nuovoStudenteInput.value = '';
         aggiornaListaStudenti();
+        scheduleDriveSave();
         
         
       // Funzione per modifica manuale del giudizio
@@ -2255,6 +2257,7 @@ mostraNotifica(`Studente "${nomeStudente}" aggiunto!`, "success");
           valutazioniCompletate = [];
           noteStudenti = [];
           aggiornaListaStudenti();
+          scheduleDriveSave();
           
       // Funzione per modifica manuale del giudizio
       function modificaGiudizio(studenteIndex) {
@@ -2503,8 +2506,9 @@ mostraNotifica("Tutti gli studenti sono stati rimossi.", "info");
           document.getElementById('file-import-info').innerHTML = '';
           document.getElementById('file-import-info').classList.add('hidden');
         }
-        
+
         aggiornaListaStudenti();
+        scheduleDriveSave();
         
       // Funzione per modifica manuale del giudizio
       function modificaGiudizio(studenteIndex) {
@@ -3441,6 +3445,10 @@ document.addEventListener('DOMContentLoaded', function() {
           Disconnetti
         </button>
       </div>
+      <button type="button" onclick="listAnniPrecedenti()" style="width:100%; margin-top:10px; background:#7c3aed; color:#fff; border:none; border-radius:8px; padding:10px 16px; cursor:pointer; font-size:0.9rem;">
+        📂 Carica anno precedente…
+      </button>
+      <div id="drive-anni-list" style="display:none; margin-top:10px;"></div>
       <p style="margin-top:12px; font-size:0.8rem; color:#64748b; background:#fef9c3; padding:10px 12px; border-radius:8px;">
         💡 <strong>PC condiviso?</strong> Clicca <strong>Disconnetti</strong> al termine: rimuove i tuoi dati dal browser e li lascia al sicuro solo sul tuo Drive.
       </p>
@@ -3737,6 +3745,72 @@ async function driveApiFetch(url, method, body) {
   const resp = await fetch(url, opts);
   if (!resp.ok) throw new Error('Drive API error ' + resp.status);
   return resp.json();
+}
+
+async function listAnniPrecedenti() {
+  const list = document.getElementById('drive-anni-list');
+  if (!driveState.enabled || !driveState.accessToken || !driveState.folderId) {
+    list.style.display = 'block';
+    list.innerHTML = '<p style="color:#e53935;font-size:0.85rem;">Connettiti prima a Drive.</p>';
+    return;
+  }
+  list.style.display = 'block';
+  list.innerHTML = '<p style="font-size:0.85rem;color:#64748b;">Caricamento anni...</p>';
+  try {
+    const q = encodeURIComponent(`'${driveState.folderId}' in parents and mimeType='application/vnd.google-apps.folder' and trashed=false`);
+    const resp = await driveApiFetch(`https://www.googleapis.com/drive/v3/files?q=${q}&fields=files(id,name)&orderBy=name%20desc`);
+    const anni = (resp.files || []).filter(f => f.name !== (schoolInfo && schoolInfo.annoScolastico ? schoolInfo.annoScolastico.trim() : ''));
+    if (!anni.length) {
+      list.innerHTML = '<p style="font-size:0.85rem;color:#64748b;">Nessun anno precedente trovato.</p>';
+      return;
+    }
+    list.innerHTML = '<p style="font-size:0.85rem;color:#475569;margin-bottom:6px;"><strong>Seleziona anno da caricare:</strong></p>';
+    anni.forEach(folder => {
+      const btn = document.createElement('button');
+      btn.textContent = '📅 ' + folder.name;
+      btn.style.cssText = 'display:block;width:100%;text-align:left;background:#f1f5f9;color:#1e293b;border:1px solid #e2e8f0;border-radius:6px;padding:8px 12px;margin-bottom:6px;cursor:pointer;font-size:0.9rem;';
+      btn.onmouseover = () => btn.style.background = '#e2e8f0';
+      btn.onmouseout  = () => btn.style.background = '#f1f5f9';
+      btn.onclick = () => caricaAnnoArchiviato(folder.id, folder.name);
+      list.appendChild(btn);
+    });
+  } catch(e) {
+    list.innerHTML = '<p style="color:#e53935;font-size:0.85rem;">Errore: ' + e.message + '</p>';
+  }
+}
+
+async function caricaAnnoArchiviato(folderId, annoName) {
+  try {
+    const q = encodeURIComponent(`name='${DRIVE_FILE_NAME}' and '${folderId}' in parents and trashed=false`);
+    const resp = await driveApiFetch(`https://www.googleapis.com/drive/v3/files?q=${q}&fields=files(id,name)`);
+    if (!resp.files || !resp.files.length) {
+      alert('Nessun file comportamento trovato per l\'anno ' + annoName);
+      return;
+    }
+    if (!confirm('Caricare i dati dell\'anno ' + annoName + '?\nI dati dell\'anno corrente rimarranno sul Drive — verrà sovrascritta solo la visualizzazione.')) return;
+    const fileId = resp.files[0].id;
+    const data = await (await fetch(
+      `https://www.googleapis.com/drive/v3/files/${fileId}?alt=media`,
+      { headers: { Authorization: 'Bearer ' + driveState.accessToken } }
+    )).json();
+    // Ripristina (sola lettura — non aggiorna driveState.fileId così non sovrascrive)
+    if (data.studenti)              studenti              = [...data.studenti];
+    if (data.valutazioniCompletate) valutazioniCompletate = JSON.parse(JSON.stringify(data.valutazioniCompletate));
+    if (data.noteStudenti)          noteStudenti          = [...data.noteStudenti];
+    if (data.giudiziPersonalizzati) giudiziPersonalizzati = Array.isArray(data.giudiziPersonalizzati) ? [...data.giudiziPersonalizzati] : data.giudiziPersonalizzati;
+    if (data.datiClasse)            datiClasse            = JSON.parse(JSON.stringify(data.datiClasse));
+    if (data.schoolInfo) {
+      schoolInfo = JSON.parse(JSON.stringify(data.schoolInfo));
+      localStorage.setItem('schoolInfo', JSON.stringify(schoolInfo));
+    }
+    if (typeof aggiornaListaStudenti === 'function') aggiornaListaStudenti();
+    const hdr = document.getElementById('header-school');
+    if (hdr) hdr.textContent = (schoolInfo && schoolInfo.istituto) ? schoolInfo.istituto : 'Informazioni scuola (clicca per modificare)';
+    document.getElementById('drive-modal').style.display = 'none';
+    mostraNotifica('Anno ' + annoName + ' caricato (sola lettura)', 'success');
+  } catch(e) {
+    alert('Errore nel caricamento: ' + e.message);
+  }
 }
 
 window.addEventListener('load', () => setTimeout(loadDriveConfig, 600));
