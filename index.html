@@ -3242,10 +3242,10 @@ function buildGiudizioExplanation(valutazione, studenteIndex) {
   const regolePDF = [[0,5,'5/5'],[1,4,'≥4/5'],[2,4,'≥4/5'],[3,4,'≥4/5'],[4,4,'≥4/5'],[5,4,'≥4/5']];
   for (const [liv, soglia, label] of regolePDF) {
     if (conteggi[liv] >= soglia) {
-      h += `<div style="font-weight:700;font-size:0.82rem;color:#86efac;">✅ Regola PDF applicata</div>
+      h += `<div style="font-weight:700;font-size:0.82rem;color:#86efac;">✅ Giudizio da delibera del Collegio Docenti</div>
             <div style="font-size:0.78rem;color:#94a3b8;margin-top:2px;">
               ${conteggi[liv]} indicatori su 5 = <b style="color:${colori[liv]};">${nomiLiv[liv]}</b><br>
-              (soglia: ${label} ${nomiLiv[liv]})
+              (soglia prevista: ${label} per ${nomiLiv[liv]})
             </div>`;
       return h;
     }
@@ -3262,14 +3262,17 @@ function buildGiudizioExplanation(valutazione, studenteIndex) {
   const idxVoto = scala.indexOf(voto);
   const colCalc = idxVoto >= 0 ? colori[idxVoto] : '#94a3b8';
 
-  h += `<div style="font-weight:700;color:#fbbf24;font-size:0.82rem;">⚠️ Caso misto — nessuna soglia PDF</div>
+  h += `<div style="font-weight:700;color:#fbbf24;font-size:0.82rem;">⚠️ Caso non previsto dalla delibera</div>
         <div style="font-size:0.78rem;color:#94a3b8;margin-top:3px;">
-          (${dettaglio}) ÷ 5 = <b style="color:#f8fafc;">${media.toFixed(2)}</b><br>
-          → arrotondato a <b style="color:${colCalc};">${giudCalc}</b>
+          Gli indicatori sono distribuiti su livelli diversi e nessun livello raggiunge
+          le soglie stabilite dal Collegio Docenti.<br><br>
+          Il sistema ha usato una <b style="color:#f8fafc;">media percentuale</b>:<br>
+          (${dettaglio}) ÷ 5 = <b style="color:#f8fafc;">${media.toFixed(2)}</b>
+          → <b style="color:${colCalc};">${giudCalc}</b>
         </div>
         <div style="color:#fbbf24;font-size:0.77rem;margin-top:7px;padding-top:6px;border-top:1px solid #334155;">
-          ⚠️ Il Consiglio di Classe è invitato<br>a verificare: giudizio calcolato per<br>
-          media, non per soglia diretta.
+          ⚠️ Giudizio approssimato — il Consiglio<br>di Classe è invitato a verificarlo<br>
+          e modificarlo se necessario (✏️).
         </div>`;
   return h;
 }
