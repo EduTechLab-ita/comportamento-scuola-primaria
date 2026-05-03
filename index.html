@@ -560,6 +560,22 @@ td[class^="selezione-"] {
   background-color: var(--primary);
 }
 
+/* Giudizio approssimato (indicatori misti) */
+.badge-approssimato {
+  outline: 2px solid #f59e0b !important;
+}
+.badge-approssimato::after {
+  content: " ⚠";
+  font-size: 0.8em;
+}
+.voto-approssimato {
+  outline: 2px solid #f59e0b !important;
+}
+@media print {
+  .badge-approssimato::after,
+  .voto-approssimato::after { content: " ⚠"; }
+}
+
 @media print {
   /* Elimina margini interni per stampa compatta */
   .container, #report {
@@ -1732,11 +1748,11 @@ td[class^="selezione-"] {
             "Manifesta atteggiamenti sufficientemente cooperativi nei confronti dei compagni e degli adulti.",
             "Rispetta sostanzialmente le regole dell'istituzione scolastica ma ha ricevuto alcuni richiami sul diario/registro. La cura del proprio materiale, il rispetto di quello altrui e dei contesti nei quali vive le esperienze devono essere sollecitati."
           ],
-          requisiti: 3,
+          requisiti: 4,
           classe: "badge-discreto"
         },
-        { 
-          nome: "SUFFICIENTE", 
+        {
+          nome: "SUFFICIENTE",
           descrittori: [
             "Frequenta in maniera irregolare.",
             "Porta a termine le consegne in modo parziale, incompleto; raramente si assume la responsabilità dei propri doveri.",
@@ -1744,19 +1760,19 @@ td[class^="selezione-"] {
             "Manifesta atteggiamenti poco cooperativi nei confronti dei compagni e degli adulti e non sempre è disponibile e corretto.",
             "A volte non rispetta le regole dell'istituzione scolastica e della convivenza civile e ha ricevuto diversi richiami/annotazioni sul diario/registro. Ha scarsa cura del proprio materiale, è poco rispettoso di quello altrui e del contesto nel quale vive le esperienze."
           ],
-          requisiti: 2,
+          requisiti: 4,
           classe: "badge-sufficiente"
         },
-        { 
-          nome: "NON SUFFICIENTE", 
+        {
+          nome: "NON SUFFICIENTE",
           descrittori: [
             "Frequentazione scolastica insufficiente, con ripetute assenze e ritardi che compromettono il percorso formativo.",
             "Non rispetta le consegne e non si assume la responsabilità dei propri doveri.",
             "Non mostra interesse e partecipazione all'attività didattica e al dialogo educativo disturbando in modo continuo e frequente il lavoro comune.",
-            "Manifesta atteggiamenti di intolleranza e non cooperazione nei confronti di compagni e adulti.",
+            "Manifesta atteggiamenti di intolleranza, anche aggressivi, e di non cooperazione nei confronti di compagni e adulti.",
             "Non rispetta le regole dell'istituzione scolastica e della convivenza civile e ha ricevuto numerose o gravi richiami/annotazioni sul diario/registro. Non ha cura del proprio materiale, non è rispettoso di quello altrui e del contesto nel quale vive le esperienze."
           ],
-          requisiti: 2,
+          requisiti: 4,
           classe: "badge-nonsufficiente"
         }
       ];
@@ -2777,9 +2793,12 @@ document.getElementById('nome-studente-attuale').textContent = studenti[studente
           span.textContent = completo ? "Giudizio: " + giudizio : "Giudizio: -";
           span.className = "badge";
           if (completo) {
-            // Usa la versione normalizzata per le classi CSS
             const giudizioClasseCSS = giudizio.toLowerCase().replace(' ', '');
             span.classList.add("badge-" + giudizioClasseCSS);
+            if (isGiudizioApprossimato(valutazione)) {
+              span.classList.add("badge-approssimato");
+              span.title = "Giudizio approssimato (indicatori misti) — verifica consigliata dal Consiglio di Classe";
+            }
           }
         }
       }
@@ -2915,36 +2934,40 @@ function calcolaGiudizioFinale(valutazioneStudente, studenteIndex) {
   const conteggi = Array(6).fill(0);
   const voti = [];
   valutazioneStudente.forEach(v => {
-    if (v !== null) {
-      conteggi[v]++;
-      voti.push(v);
-    }
+    if (v !== null) { conteggi[v]++; voti.push(v); }
   });
-  // Se nessun indicatore, non valutato
-  if (voti.length === 0) {
-    return "NON VALUTATO";
-  }
-  // Casi specifici da gestire prima delle regole obbligatorie
-  // 2 SUFFICIENTE (indice 4) + 3 NON SUFFICIENTE (indice 5) -> NON SUFFICIENTE
-  if (conteggi[4] === 2 && conteggi[5] === 3) {
-    return "NON SUFFICIENTE";
-  }
-  // 2 SUFFICIENTE (indice 4) + 3 DISCRETO (indice 3) -> SUFFICIENTE
-  if (conteggi[4] === 2 && conteggi[3] === 3) {
-    return "SUFFICIENTE";
-  }
-  // Regole obbligatorie
-  if (conteggi[0] === 5) return "OTTIMO";
-  if (conteggi[1] >= 4) return "DISTINTO";
-  if (conteggi[2] >= 4) return "BUONO";
-  if (conteggi[3] >= 3) return "DISCRETO";
-  if (conteggi[4] >= 2) return "SUFFICIENTE";
-  if (conteggi[5] >= 3) return "NON SUFFICIENTE";
-  // Fallback: media matematica con scala invertita (OTTIMO=5,...,NON SUFFICIENTE=0)
-  const etichette = ["NON SUFFICIENTE","SUFFICIENTE","DISCRETO","BUONO","DISTINTO","OTTIMO"];
-  const invertiti = voti.map(v => 5 - v);
-  const media = Math.floor(invertiti.reduce((a,b)=>a+b,0) / invertiti.length);
-  return etichette[media];
+  if (voti.length === 0) return "NON VALUTATO";
+  // Regole PDF: soglie corrette da delibera Collegio Docenti (30/04/2026)
+  if (conteggi[0] === 5) return "OTTIMO";           // 5/5 obbligatori
+  if (conteggi[1] >= 4)  return "DISTINTO";         // almeno 4/5
+  if (conteggi[2] >= 4)  return "BUONO";            // almeno 4/5
+  if (conteggi[3] >= 4)  return "DISCRETO";         // almeno 4/5
+  if (conteggi[4] >= 4)  return "SUFFICIENTE";      // almeno 4/5
+  if (conteggi[5] >= 4)  return "NON SUFFICIENTE";  // almeno 4/5
+  // Caso misto: media in scala 6-10, arrotondamento standard (≥0.5 per eccesso)
+  // OTTIMO=10, DISTINTO=9, BUONO=8, DISCRETO=7, SUFFICIENTE=6, NON SUFFICIENTE=5
+  const scala = [10, 9, 8, 7, 6, 5];
+  const somma = voti.reduce((acc, v) => acc + scala[v], 0);
+  let voto = Math.round(somma / voti.length);
+  if (voto >= 10) voto = 9; // OTTIMO richiede 5/5 strict, non assegnabile qui
+  if (voto <= 5)  voto = 6; // NON SUFFICIENTE richiede 4/5 strict, non assegnabile qui
+  const mappa = { 9: "DISTINTO", 8: "BUONO", 7: "DISCRETO", 6: "SUFFICIENTE" };
+  return mappa[voto] || "SUFFICIENTE";
+}
+
+function isGiudizioApprossimato(valutazioneStudente, studenteIndex) {
+  if (typeof studenteIndex !== 'undefined' && giudiziPersonalizzati[studenteIndex]) return false;
+  const conteggi = Array(6).fill(0);
+  const voti = [];
+  valutazioneStudente.forEach(v => { if (v !== null) { conteggi[v]++; voti.push(v); }});
+  if (voti.length < 5) return false;
+  if (conteggi[0] === 5) return false;
+  if (conteggi[1] >= 4)  return false;
+  if (conteggi[2] >= 4)  return false;
+  if (conteggi[3] >= 4)  return false;
+  if (conteggi[4] >= 4)  return false;
+  if (conteggi[5] >= 4)  return false;
+  return true; // nessuna regola PDF soddisfatta → giudizio approssimato
 }
 
 
@@ -2997,10 +3020,15 @@ function calcolaGiudizioFinale(valutazioneStudente, studenteIndex) {
           // Voto
           const giudizio = calcolaGiudizioFinale(valutazioniCompletate[index], index);
           const tdVoto = document.createElement('td');
-          tdVoto.textContent = giudizio;
-          // Normalizza il nome del giudizio per le classi CSS
           const giudizioCSS = normalizzaGiudizioCSS(giudizio);
           tdVoto.className = 'voto-' + giudizioCSS;
+          if (isGiudizioApprossimato(valutazioniCompletate[index], index)) {
+            tdVoto.classList.add('voto-approssimato');
+            tdVoto.textContent = giudizio + " ⚠";
+            tdVoto.title = "Giudizio approssimato (indicatori misti) — verifica consigliata dal Consiglio di Classe";
+          } else {
+            tdVoto.textContent = giudizio;
+          }
           tr.appendChild(tdVoto);
           
           
