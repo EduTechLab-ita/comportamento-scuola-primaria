@@ -3333,10 +3333,18 @@ if ('serviceWorker' in navigator) {
   window.addEventListener('load', function() {
     navigator.serviceWorker.register('./sw.js')
       .then(function(registration) {
-        console.log('ServiceWorker registrato con successo:', registration.scope);
+        console.log('ServiceWorker registrato:', registration.scope);
       }, function(err) {
         console.log('ServiceWorker registrazione fallita:', err);
       });
+
+    // Ricarica automatica quando il SW si aggiorna
+    // (skipWaiting + clients.claim nel SW garantiscono che il nuovo SW
+    //  si attivi subito → controllerchange scatta → la pagina si ricarica
+    //  con la versione aggiornata, esattamente come le app native)
+    navigator.serviceWorker.addEventListener('controllerchange', function() {
+      window.location.reload();
+    });
   });
 }
 </script>

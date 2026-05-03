@@ -1,4 +1,4 @@
-const CACHE_NAME = 'comportamento-scuola-v2';
+const CACHE_NAME = 'comportamento-scuola-v3';
 const urlsToCache = [
   './',
   './index.html',
@@ -13,15 +13,13 @@ const urlsToCache = [
   './icons/icon-512x512.png'
 ];
 
-// Install event - cache resources
+// Install event - cache resources + attivazione immediata
 self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME)
-      .then((cache) => {
-        console.log('Cache opened');
-        return cache.addAll(urlsToCache);
-      })
+      .then((cache) => cache.addAll(urlsToCache))
   );
+  self.skipWaiting(); // Attiva subito il nuovo SW senza aspettare la chiusura delle tab
 });
 
 // Fetch event - serve from cache, fallback to network
@@ -39,18 +37,15 @@ self.addEventListener('fetch', (event) => {
   );
 });
 
-// Activate event - clean up old caches
+// Activate event - elimina cache vecchie + prende controllo immediato
 self.addEventListener('activate', (event) => {
   event.waitUntil(
     caches.keys().then((cacheNames) => {
       return Promise.all(
         cacheNames.map((cacheName) => {
-          if (cacheName !== CACHE_NAME) {
-            console.log('Deleting old cache:', cacheName);
-            return caches.delete(cacheName);
-          }
+          if (cacheName !== CACHE_NAME) return caches.delete(cacheName);
         })
       );
-    })
+    }).then(() => self.clients.claim()) // Prende controllo di tutte le tab aperte
   );
 });
