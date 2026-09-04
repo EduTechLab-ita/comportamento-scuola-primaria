@@ -1318,7 +1318,7 @@ td[class^="selezione-"] {
     
     <!-- Footer per schermo -->
     <footer class="footer-signature no-print">
-      Comportamento Scuola v3.0 — EduTechLab © 2026 - Fabio Rizzotto
+      Comportamento Scuola v3.2 — EduTechLab © 2026 - Fabio Rizzotto
     </footer>
   
     <!-- FASE INSERIMENTO DATI -->
@@ -3736,10 +3736,22 @@ let driveState = {
 };
 window._isDriveConnected = () => driveState.enabled && driveState.accessToken && Date.now() < driveState.tokenExpiry;
 
+// Il token di accesso non va sul disco: è la chiave del Drive di chi usa
+// l'app, e su un PC condiviso resterebbe a disposizione di chi si siede
+// dopo. Vive in sessionStorage e sparisce con la chiusura del browser.
 function loadDriveConfig() {
   try {
     const saved = localStorage.getItem('driveState_comportamento_v1');
     if (saved) driveState = Object.assign(driveState, JSON.parse(saved));
+    const sessione = sessionStorage.getItem('driveToken_comportamento');
+    if (sessione) {
+      const t = JSON.parse(sessione);
+      driveState.accessToken = t.accessToken;
+      driveState.tokenExpiry = t.tokenExpiry;
+    } else {
+      driveState.accessToken = null;
+      driveState.tokenExpiry = 0;
+    }
   } catch(e) {}
   updateDriveButton();
   if (driveState.enabled && driveState.accessToken && Date.now() < driveState.tokenExpiry - 30000) {
@@ -3750,8 +3762,30 @@ function loadDriveConfig() {
 }
 
 function saveDriveStateLocal() {
-  localStorage.setItem('driveState_comportamento_v1', JSON.stringify(driveState));
+  const { accessToken, tokenExpiry, ...suDisco } = driveState;
+  localStorage.setItem('driveState_comportamento_v1', JSON.stringify(suDisco));
+  try {
+    if (accessToken) {
+      sessionStorage.setItem('driveToken_comportamento', JSON.stringify({ accessToken, tokenExpiry }));
+    } else {
+      sessionStorage.removeItem('driveToken_comportamento');
+    }
+  } catch(e) {}
 }
+
+// Bonifica una tantum: rimuove il token lasciato sul disco dalle versioni
+// precedenti, senza toccare il resto dello stato Drive.
+(function ripuliscTokenSuDisco() {
+  try {
+    const saved = localStorage.getItem('driveState_comportamento_v1');
+    if (!saved) return;
+    const s = JSON.parse(saved);
+    if (s && (s.accessToken || s.tokenExpiry)) {
+      delete s.accessToken; delete s.tokenExpiry;
+      localStorage.setItem('driveState_comportamento_v1', JSON.stringify(s));
+    }
+  } catch(e) {}
+})();
 
 function updateDriveButton() {
   const btn   = document.getElementById('drive-btn');
